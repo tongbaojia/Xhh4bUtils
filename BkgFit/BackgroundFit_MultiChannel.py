@@ -18,13 +18,15 @@ scaleTop2b = None
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "LeadCaloJetM",
-                  n_trkjet  = ["4","3"],
+                  n_trkjet  = ["4","4"],
                   n_btag    = ["4","3"],
                   btag_WP     = "80",
                   NRebin = 1,
                   use_one_top_nuis = False,
-                  nbtag_top_shape = "3",
-                  scale_top_2b = False ):
+                  use_scale_top_2b = False,
+                  nbtag_top_shape = None,
+                  makePlots = False,
+                  verbose = True ):
     
     global h_qcd
     global h_top
@@ -58,7 +60,7 @@ def BackgroundFit(datafileName="hist_data.root",
 
     useOneTopNuis = use_one_top_nuis
 
-    scaleTop2b = scale_top_2b
+    scaleTop2b = use_scale_top_2b
     
     regions = [ num_trkjet[i]+num_btag[i] for i in range(num_trkjet.shape[0]) ]
 
@@ -72,7 +74,7 @@ def BackgroundFit(datafileName="hist_data.root",
     n_param = len(regions) + ( 1 if useOneTopNuis else len(regions) )
     
     minuit = R.TMinuit(n_param) # 2 parameter fit
-    minuit.SetPrintLevel(1)
+    minuit.SetPrintLevel( (1 if verbose else -1) )
     minuit.SetErrorDef(0.5)
     minuit.SetFCN(NegLogL)
     #########################################################
@@ -105,13 +107,19 @@ def BackgroundFit(datafileName="hist_data.root",
         else:
             ht = histos[r]["top"].Clone("h_top_"+r)
 
-        if not scaleTop2b:
-            hq.Add( ht, -1.0)
+       
+        hq.Add( ht2, -1.0)
         
         h_data[r] = hd 
         h_qcd[r] = hq 
         h_top[r] = ht 
-        h_top_2b[r] = ht2 
+        h_top_2b[r] = ht2
+
+        if NRebin > 1:
+            h_data[r].Rebin(NRebin)
+            h_qcd[r].Rebin(NRebin)
+            h_top[r].Rebin(NRebin)
+            h_top_2b[r].Rebin(NRebin)
         
        
     
@@ -127,10 +135,11 @@ def BackgroundFit(datafileName="hist_data.root",
 
     #ComputeBasicMuQCD( histo_s, histo_c )
 
-    for i in range(len(regions)):
-        c=MakePlot(regions[i], results["muqcd"][i], results["topscale"][0 if useOneTopNuis else i])
+    if makePlots:
+        for i in range(len(regions)):
+            c=MakePlot(regions[i], results["muqcd"][i], results["topscale"][0 if useOneTopNuis else i])
 
-    return
+    return results
 
 
 
@@ -286,7 +295,7 @@ def Fit( minuit ):
     corr_m = np.zeros( (npars, npars) )
     for i in range(npars):
         for j in range(npars):
-            corr_m = cov_m[i,j] / np.sqrt( cov_m[i,i]*cov_m[j,j] )
+            corr_m[i,j] = cov_m[i,j] / np.sqrt( cov_m[i,i]*cov_m[j,j] )
 
     out = { "muqcd" : muqcd,
             "muqcd_e" : muqcd_e,
@@ -342,7 +351,9 @@ def NegLogL(npar, gin, f, par, ifag):
             expected_i = muqcd * qcd_r.GetBinContent(ibin) + topscale * top_r.GetBinContent(ibin)
             
             if scaleTop2b:
-                expected_i = expected_i - (muqcd * topscale * top_2b_r.GetBinContent(ibin))
+                expected_i = expected_i + (muqcd * (1.0 - topscale) * top2b_r.GetBinContent(ibin))
+                # use (1.0 - topscale) since top2b is already subtracted from data to make qcd
+                # so we need to first add it back, and then subtract the newly scaled top2b
         
             if expected_i > 0:
                 L += expected_i - (data_r.GetBinContent(ibin)) * np.log( expected_i );
