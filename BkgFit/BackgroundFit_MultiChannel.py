@@ -5,6 +5,9 @@ from array import array
 import sys
 from copy import deepcopy
 
+from GetEigenVariations import GetEigenVariations
+
+
 regions = {}
 h_qcd = {}
 h_top = {}
@@ -18,9 +21,9 @@ scaleTop2b = None
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "LeadCaloJetM",
-                  n_trkjet  = ["4","4"],
-                  n_btag    = ["4","3"],
-                  btag_WP     = "80",
+                  n_trkjet  = ["4"],
+                  n_btag    = ["4"],
+                  btag_WP     = "77",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
@@ -127,6 +130,15 @@ def BackgroundFit(datafileName="hist_data.root",
   
     results = Fit( minuit )
 
+    evars = GetEigenVariations(results["cov_m"])
+    pnom  = np.asarray( results["muqcd"] + results["topscale"] )
+    pvars = [ [pnom+evars[i], pnom-evars[i]] for i in range(len(evars)) ]
+
+    results["pnom"]  = pnom
+    results["pvars"] = pvars
+
+    print pnom
+    print pvars
 
     #print "Fit Results:"
     #print "mu_qcd = ", results["muqcd"], "+/-", results["muqcd_e"]
@@ -139,6 +151,10 @@ def BackgroundFit(datafileName="hist_data.root",
         for i in range(len(regions)):
             c=MakePlot(regions[i], results["muqcd"][i], results["topscale"][0 if useOneTopNuis else i])
 
+
+    datafile.Close()
+    topfile.Close()
+    
     return results
 
 
@@ -322,7 +338,7 @@ def ClearMinuit( minuit ):
             continue
 
         topscaleName = "topscale"+("_"+regions[i] if not useOneTopNuis else '')
-        minuit.DefineParameter(i+len(regions), topscaleName, 1.5, 0.1, 0.00001, 5)
+        minuit.DefineParameter(i+len(regions), topscaleName, 1.3, 0.01, 0.00001, 5)
         
     return
     
