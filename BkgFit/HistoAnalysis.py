@@ -56,6 +56,9 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##################################################################
 
 
+
+
+    
     ##### Do Background Fits ############################################
     bkgFitResults = BkgFit. BackgroundFit(datafileName=datafileName,
                                       topfileName=topfileName,
@@ -70,8 +73,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                                       makePlots = False,
                                       verbose = False )
 
+    pvars = bkgFitResults["pvars"]
     ##################################################################
 
+
+
+    
 
     ##### Get Signal Region Histograms ################################
     datafile = R.TFile(datafileName,"READ")
@@ -84,15 +91,27 @@ def HistoAnalysis(datafileName="hist_data.root",
     # collect all histograms
     for r in ["44","43","42","33","32"]:
         folder_r = folder( r[0], r[1], btag_WP)
+        
         data_r   = datafile.Get(folder_r+dist_name).Clone("data_"+r)
-        top_r    = topfile.Get(folder_r+dist_name).Clone("top_"+r)        
+        data_r.SetDirectory(0)
+        
+        top_r    = topfile.Get(folder_r+dist_name).Clone("top_"+r)
+        top_r.SetDirectory(0)     
 
         histos[r]     = {"data": data_r,            "top": top_r}
         histos_int[r] = {"data": data_r.Integral(), "top": top_r.Integral()}
-    
 
-    # scaling and subtractions
+    datafile.Close()
+    topfile.Close()
+    ##################################################################
+
+
+
+    
+    ##### scaling and subtractions #################################
     for ir in range(len(regions)):
+        outfileStat = R.TFile("outfileStat_"+r+".root","RECREATE")
+
         r = regions[ir]
         
         r_2b = r[0]+"2"
@@ -103,6 +122,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             top_2b.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
 
         qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
+        qcd_int = qcd_r.Integral()
         #qcd_r.Add( top_2b, -1)
 
         top_r = histos[r]["top"].Clone("top__"+r)
@@ -110,39 +130,76 @@ def HistoAnalysis(datafileName="hist_data.root",
             temp_scaler = top_r.Integral() / histos[r_3b]["top"].Integral()
             top_r = histos[r_3b]["top"].Clone("top__"+r)
             top_r.Scale( temp_scaler )
+        top_int = top_r.Integral()
 
-        qcd_r.Scale( bkgFitResults["muqcd"][ir] )
-        top_r.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
+
+        mu_qcd = bkgFitResults["muqcd"][ir]
+        top_scale = (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir])
+        
+        qcd_r.Scale( mu_qcd )
+        top_r.Scale( top_scale )
+
+
+
+        ## Now do smoothing
 
         qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = "Exp", fitRange = (900, 2000), makePlots = True, outfileName="qcd_fit.root")
         top_sm = smoothfit.smoothfit(top_r, fitFunction = "Exp", fitRange = (850, 1200), makePlots = True, outfileName="top_fit.root")
 
         qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
         top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
+
+        outfileStat.WriteTObject(qcd_final, "qcd_hh_nominal","Overwrite")
+        outfileStat.WriteTObject(top_final, "top_hh_nominal","Overwrite")
+
+        for ivar in range(len(pvars)):
+            for iUD in range(2):
+                mu_qcd_var = pvars[ivar][iUD][ir]
+                top_scale_var = pvars[ivar][iUD][n_channels + (0 if use_one_top_nuis else ir) ]
+
+                qvar = qcd_r.Clone("qvar")
+                qvar.Scale( mu_qcd_var * qcd_int / qvar.Integral() )
+
+                tvar = top_r.Clone("tvar")
+                tvar.Scale( top_scale_var * top_int / tvar.Integral() )
+
+                ## Now do smoothing
+
+                qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False)
+                tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False)
+    
+                qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
+                tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
+
+                UpDw = ("Up" if iUD ==0 else "Down")
+                outfileStat.WriteTObject(qvar_final, "qcd_hh_normY"+str(ivar)+UpDw,"Overwrite")
+                outfileStat.WriteTObject(tvar_final, "top_hh_normY"+str(ivar)+UpDw,"Overwrite")
+            
+            
+
+        for ivar in range(len(qcd_sm["vars"])):
+            qup = qcd_sm["vars"][ivar][0]
+            qdw = qcd_sm["vars"][ivar][1]
+
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qup), "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qdw), "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
+
+        for ivar in range(len(top_sm["vars"])):
+            tup = top_sm["vars"][ivar][0]
+            tdw = top_sm["vars"][ivar][1]
+
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tup), "top_hh_smoothT"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tdw), "top_hh_smoothT"+str(ivar)+"Down","Overwrite")
+
+
         
-        ## low=R.Double(0.0)
-        ## high=R.Double(0.0)
-        ## qcd_sm["nom"].GetRange(low, high)
         
-        ## qcd_final = qcd_r.Clone("qcd_final__"+r)
-        ## for ibin in range(1, qcd_final.GetNbinsX()+1):
-        ##     if qcd_final.GetBinCenter(ibin) >= low:
-        ##         qcd_final.SetBinContent(ibin, 0)
-        ##         qcd_final.SetBinError(ibin, 0)
-        ## qcd_final.Add(qcd_sm["nom"], 1.0)
+        outfileStat.Close()
+        
 
+        
 
-        ## top_sm["nom"].GetRange(low, high)
-        ## top_final = top_r.Clone("top_final__"+r)
-        ## for ibin in range(1, top_final.GetNbinsX()+1):
-        ##     if top_final.GetBinCenter(ibin) >= low:
-        ##         top_final.SetBinContent(ibin, 0)
-        ##         top_final.SetBinError(ibin, 0)
-        ## top_final.Add(top_sm["nom"], 1.0)
-
-
-
-        if True:
+        if False:
             pred_final = qcd_final.Clone("pred_final__"+r)
             pred_final.Add( top_final )
 
