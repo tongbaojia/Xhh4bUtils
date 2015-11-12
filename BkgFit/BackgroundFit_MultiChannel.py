@@ -7,6 +7,8 @@ from copy import deepcopy
 
 from GetEigenVariations import GetEigenVariations
 
+from HistoTools import HistLocationString as HistLocStr
+
 
 regions = {}
 h_qcd = {}
@@ -84,15 +86,15 @@ def BackgroundFit(datafileName="hist_data.root",
 
 
     ################### Get Histograms  ###################
-    folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSBMass/"
+    #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSBMass/"
 
     histos = { }
 
     # collect all histograms
     for r in ["44","43","42","33","32"]:
-        folder_r = folder( r[0], r[1], btag_WP)
-        data_r   = datafile.Get(folder_r+dist_name).Clone("data_"+r)
-        top_r    = topfile.Get(folder_r+dist_name).Clone("top_"+r)
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+        data_r   = datafile.Get(folder_r).Clone("data_"+r)
+        top_r    = topfile.Get(folder_r).Clone("top_"+r)
         histo_r  = {"data": data_r, "top": top_r}
 
         histos[r] = histo_r

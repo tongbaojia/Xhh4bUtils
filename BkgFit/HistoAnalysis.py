@@ -6,6 +6,8 @@ from copy import deepcopy
 import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 
+from HistoTools import HistLocationString as HistLocStr
+
 
 func1 = None
 func2 = None
@@ -84,18 +86,18 @@ def HistoAnalysis(datafileName="hist_data.root",
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
 
-    folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
+    #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
 
     histos = {}
     histos_int = {}
     # collect all histograms
     for r in ["44","43","42","33","32"]:
-        folder_r = folder( r[0], r[1], btag_WP)
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
         
-        data_r   = datafile.Get(folder_r+dist_name).Clone("data_"+r)
+        data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
         
-        top_r    = topfile.Get(folder_r+dist_name).Clone("top_"+r)
+        top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)     
 
         histos[r]     = {"data": data_r,            "top": top_r}
@@ -110,9 +112,9 @@ def HistoAnalysis(datafileName="hist_data.root",
     
     ##### scaling and subtractions #################################
     for ir in range(len(regions)):
-        outfileStat = R.TFile("outfileStat_"+r+".root","RECREATE")
-
         r = regions[ir]
+        
+        outfileStat = R.TFile("outfileStat_"+r+".root","RECREATE")
         
         r_2b = r[0]+"2"
         r_3b = r[0]+"3"
