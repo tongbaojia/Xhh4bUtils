@@ -21,7 +21,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
-                  nbtag_top_shape = "3"):
+                  nbtag_top_shape = None):
 
     global func1
     global func2
@@ -86,10 +86,9 @@ def HistoAnalysis(datafileName="hist_data.root",
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
 
-    #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
 
     histos = {}
-    histos_int = {}
+    
     # collect all histograms
     for r in ["44","43","42","33","32"]:
         folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
@@ -101,7 +100,6 @@ def HistoAnalysis(datafileName="hist_data.root",
         top_r.SetDirectory(0)     
 
         histos[r]     = {"data": data_r,            "top": top_r}
-        histos_int[r] = {"data": data_r.Integral(), "top": top_r.Integral()}
 
     datafile.Close()
     topfile.Close()
@@ -114,7 +112,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     for ir in range(len(regions)):
         r = regions[ir]
         
-        outfileStat = R.TFile("outfileStat_"+r+".root","RECREATE")
+        outfileStat = R.TFile("outfile_boosted_"+r+".root","RECREATE")
         
         r_2b = r[0]+"2"
         r_3b = r[0]+"3"
@@ -154,6 +152,27 @@ def HistoAnalysis(datafileName="hist_data.root",
         outfileStat.WriteTObject(qcd_final, "qcd_hh_nominal","Overwrite")
         outfileStat.WriteTObject(top_final, "top_hh_nominal","Overwrite")
 
+        
+
+        ### propagate correlated systematics from the smoothing procedure---> these "replace" the stat error on the bins  #############
+        for ivar in range(len(qcd_sm["vars"])):
+            qup = qcd_sm["vars"][ivar][0]
+            qdw = qcd_sm["vars"][ivar][1]
+
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qup), "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qdw), "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
+
+        for ivar in range(len(top_sm["vars"])):
+            tup = top_sm["vars"][ivar][0]
+            tdw = top_sm["vars"][ivar][1]
+
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tup), "top_hh_smoothT"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tdw), "top_hh_smoothT"+str(ivar)+"Down","Overwrite")
+
+
+            
+
+        ### propagate correlated systematics from normalization fits for mu_qcd and top_scale ###############
         for ivar in range(len(pvars)):
             for iUD in range(2):
                 mu_qcd_var = pvars[ivar][iUD][ir]
@@ -179,19 +198,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             
 
-        for ivar in range(len(qcd_sm["vars"])):
-            qup = qcd_sm["vars"][ivar][0]
-            qdw = qcd_sm["vars"][ivar][1]
 
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qup), "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qdw), "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
-
-        for ivar in range(len(top_sm["vars"])):
-            tup = top_sm["vars"][ivar][0]
-            tdw = top_sm["vars"][ivar][1]
-
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tup), "top_hh_smoothT"+str(ivar)+"Up","Overwrite")
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tdw), "top_hh_smoothT"+str(ivar)+"Down","Overwrite")
 
 
         
@@ -201,47 +208,47 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         
 
-        if False:
-            pred_final = qcd_final.Clone("pred_final__"+r)
-            pred_final.Add( top_final )
+        ## if False:
+        ##     pred_final = qcd_final.Clone("pred_final__"+r)
+        ##     pred_final.Add( top_final )
 
 
-            func1 = qcd_sm["nom"]
-            func2 = top_sm["nom"]
+        ##     func1 = qcd_sm["nom"]
+        ##     func2 = top_sm["nom"]
 
-            pred_sm = R.TF1("pred_sm", FuncSum, 900, 3000)
+        ##     pred_sm = R.TF1("pred_sm", FuncSum, 900, 3000)
 
-            pred_sm.Draw("same")
-            top_sm["nom"].Draw("same")
+        ##     pred_sm.Draw("same")
+        ##     top_sm["nom"].Draw("same")
 
-            pred_final_raw = qcd_r.Clone("qcd_final_raw__"+r)
-            pred_final_raw.Add(top_r)
+        ##     pred_final_raw = qcd_r.Clone("qcd_final_raw__"+r)
+        ##     pred_final_raw.Add(top_r)
 
-            outfile = R.TFile("outfile_"+r+".root","RECREATE")
+        ##     outfile = R.TFile("outfile_"+r+".root","RECREATE")
 
-            c=R.TCanvas()
-            pred_final_raw.Draw("HIST")
-            top_r.SetLineColor(R.kBlack)
-            top_r.SetFillColor(R.kGreen)
-            top_r.Draw("sameHIST")
+        ##     c=R.TCanvas()
+        ##     pred_final_raw.Draw("HIST")
+        ##     top_r.SetLineColor(R.kBlack)
+        ##     top_r.SetFillColor(R.kGreen)
+        ##     top_r.Draw("sameHIST")
 
-            pred_sm.Draw("same")
-            top_sm["nom"].Draw("same")
+        ##     pred_sm.Draw("same")
+        ##     top_sm["nom"].Draw("same")
 
-            c.Write()
+        ##     c.Write()
 
-            c=R.TCanvas()
+        ##     c=R.TCanvas()
 
-            pred_final.Draw("HIST")
+        ##     pred_final.Draw("HIST")
 
-            top_final.SetLineColor(R.kBlack)
-            top_final.SetFillColor(R.kGreen)
+        ##     top_final.SetLineColor(R.kBlack)
+        ##     top_final.SetFillColor(R.kGreen)
 
-            top_final.Draw("sameHIST")
+        ##     top_final.Draw("sameHIST")
 
-            c.Write()
+        ##     c.Write()
 
-            outfile.Close()
+        ##     outfile.Close()
 
     
 

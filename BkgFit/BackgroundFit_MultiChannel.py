@@ -86,8 +86,6 @@ def BackgroundFit(datafileName="hist_data.root",
 
 
     ################### Get Histograms  ###################
-    #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSBMass/"
-
     histos = { }
 
     # collect all histograms
