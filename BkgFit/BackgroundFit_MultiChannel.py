@@ -23,14 +23,14 @@ scaleTop2b = None
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "LeadCaloJetM",
-                  n_trkjet  = ["4"],
-                  n_btag    = ["4"],
+                  n_trkjet  = ["4","4"],
+                  n_btag    = ["4","3"],
                   btag_WP     = "77",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
                   nbtag_top_shape = None,
-                  makePlots = False,
+                  makePlots = True,
                   verbose = True ):
     
     global h_qcd
@@ -137,8 +137,8 @@ def BackgroundFit(datafileName="hist_data.root",
     results["pnom"]  = pnom
     results["pvars"] = pvars
 
-    print pnom
-    print pvars
+    #print pnom
+    #print pvars
 
     #print "Fit Results:"
     #print "mu_qcd = ", results["muqcd"], "+/-", results["muqcd_e"]
@@ -256,15 +256,24 @@ def MakePlot(region, muqcd, topscale):
     print "Ntop = ", h_top2.Integral()
     print " "
 
-    c.SaveAs("fit_"+region+".pdf")
+    c.SaveAs("fitNorm_"+region+".root")
 
     return c
 
 
 def Fit( minuit ):
     ClearMinuit( minuit )
-    minuit.Migrad()
-    minuit.Command("MINOS")
+    
+    migradStat = minuit.Migrad()
+    if migradStat != 0:
+        print "Error in background fit: Migrad did not terminate properly. Exiting"
+        sys.exit(0)
+    
+    minosStat  = minuit.Command("MINOS")
+    if minosStat != 0:
+        print "Error in background fit: Minos did not terminate properly. Exiting"
+        sys.exit(0)
+
 
     eparab = R.Double(0) #dummy
     gcc = R.Double(0)    #dummy

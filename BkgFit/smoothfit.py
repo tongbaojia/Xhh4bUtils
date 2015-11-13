@@ -6,7 +6,7 @@ from array import array
 from GetEigenVariations import GetEigenVariations
 
 
-def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, outfileName="fit.root"):
+def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="fit.root"):
     npar = None
     func = None
     fitChoice = None
@@ -23,8 +23,14 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         fitChoice = DijetFunc
         func = R.TF1("fit", fitChoice, fitRange[0], fitRange[1], 3)
         func.SetParameters(0.3, 30, -3)
+
+    Vmode = ("Q" if not verbose else "")
+    fitResult = histo.Fit("fit", "S0"+Vmode, "", fitRange[0], fitRange[1])
+
+    if fitResult.Status() != 0:
+        print "Error in smoothing fit: did not terminate properly. Exiting"
+        sys.exit(0)
     
-    fitResult = histo.Fit("fit", "S0", "", fitRange[0], fitRange[1])
     cov_TMatrix = fitResult.GetCovarianceMatrix()
     cov = np.zeros( (npar, npar) )
     for i in range(npar):

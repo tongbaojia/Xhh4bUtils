@@ -21,7 +21,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
-                  nbtag_top_shape = None):
+                  nbtag_top_shape = "3",
+                  verbose = False):
 
     global func1
     global func2
@@ -72,8 +73,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                                       use_one_top_nuis = use_one_top_nuis,
                                       use_scale_top_2b = use_scale_top_2b,
                                       nbtag_top_shape = nbtag_top_shape,
-                                      makePlots = False,
-                                      verbose = False )
+                                      makePlots = True,
+                                      verbose = verbose )
 
     pvars = bkgFitResults["pvars"]
     ##################################################################
@@ -143,8 +144,8 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         ## Now do smoothing
 
-        qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = "Exp", fitRange = (900, 2000), makePlots = True, outfileName="qcd_fit.root")
-        top_sm = smoothfit.smoothfit(top_r, fitFunction = "Exp", fitRange = (850, 1200), makePlots = True, outfileName="top_fit.root")
+        qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = "Exp", fitRange = (900, 2000), makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
+        top_sm = smoothfit.smoothfit(top_r, fitFunction = "Exp", fitRange = (850, 1200), makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
 
         qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
         top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
@@ -186,8 +187,8 @@ def HistoAnalysis(datafileName="hist_data.root",
 
                 ## Now do smoothing
 
-                qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False)
-                tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False)
+                qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose)
+                tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False, verbose = verbose)
     
                 qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
                 tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
