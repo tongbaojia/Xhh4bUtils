@@ -11,21 +11,23 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     func = None
     fitChoice = None
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink]
+
+    fitName = "fit_"+outfileName[:-5]
     
     if fitFunction == "Exp":
         npar = 2
         fitChoice = ExpoFunc
-        func = R.TF1("fit", fitChoice, fitRange[0], fitRange[1], 2)
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 2)
         func.SetParameters(0.006, 5.0)
 
     elif fitFunction == "Dijet":
         npar = 3
         fitChoice = DijetFunc
-        func = R.TF1("fit", fitChoice, fitRange[0], fitRange[1], 3)
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 3)
         func.SetParameters(0.3, 30, -3)
 
     Vmode = ("Q" if not verbose else "")
-    fitResult = histo.Fit("fit", "S0"+Vmode, "", fitRange[0], fitRange[1])
+    fitResult = histo.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1])
 
     if fitResult.Status() != 0:
         print "Error in smoothing fit: did not terminate properly. Exiting"
@@ -44,7 +46,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     evars = GetEigenVariations( cov )
 
     
-    fitFunc = histo.GetFunction("fit")
+    fitFunc = histo.GetFunction(fitName)
 
     params = array('d',[0]*npar)
     fitFunc.GetParameters( params )

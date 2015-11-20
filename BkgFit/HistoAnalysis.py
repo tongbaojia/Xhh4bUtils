@@ -21,7 +21,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
-                  nbtag_top_shape = "3",
+                  nbtag_top_shape = None,
                   verbose = False):
 
     global func1
@@ -98,7 +98,13 @@ def HistoAnalysis(datafileName="hist_data.root",
         data_r.SetDirectory(0)
         
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
-        top_r.SetDirectory(0)     
+        top_r.SetDirectory(0)
+
+        for ibin in range(1, top_r.GetNbinsX()+1):
+            if top_r.GetBinContent(ibin) < 0:
+                top_r.SetBinContent(ibin, 0)
+                top_r.SetBinError(ibin, 0)
+                
 
         histos[r]     = {"data": data_r,            "top": top_r}
 
@@ -187,8 +193,10 @@ def HistoAnalysis(datafileName="hist_data.root",
 
                 ## Now do smoothing
 
-                qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose)
-                tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False, verbose = verbose)
+                qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose,
+                                              outfileName="qcd_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
+                tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False, verbose = verbose,
+                                              outfileName="top_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
     
                 qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
                 tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
@@ -197,11 +205,6 @@ def HistoAnalysis(datafileName="hist_data.root",
                 outfileStat.WriteTObject(qvar_final, "qcd_hh_normY"+str(ivar)+UpDw,"Overwrite")
                 outfileStat.WriteTObject(tvar_final, "top_hh_normY"+str(ivar)+UpDw,"Overwrite")
             
-            
-
-
-
-
         
         
         outfileStat.Close()

@@ -93,6 +93,13 @@ def BackgroundFit(datafileName="hist_data.root",
         folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
+
+        for ibin in range(1, top_r.GetNbinsX()+1):
+            if top_r.GetBinContent(ibin) < 0:
+                top_r.SetBinContent(ibin, 0)
+                top_r.SetBinError(ibin, 0)
+    
+        
         histo_r  = {"data": data_r, "top": top_r}
 
         histos[r] = histo_r
@@ -109,6 +116,7 @@ def BackgroundFit(datafileName="hist_data.root",
             ht.Scale( histos[r]["top"].Integral() / ht.Integral() ) #scale to correct norm for region
         else:
             ht = histos[r]["top"].Clone("h_top_"+r)
+
 
        
         hq.Add( ht2, -1.0)
