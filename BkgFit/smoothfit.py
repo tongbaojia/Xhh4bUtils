@@ -61,7 +61,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
 
     
 
-    drawFunc = R.TF1("drawfit", fitChoice, fitRange[0], 3000, npar)
+    drawFunc = R.TF1("drawfit", fitChoice, fitRange[0], 5000, npar)
     drawFunc.SetParameters( params )
 
     if makePlots:
@@ -72,13 +72,13 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
 
     fvar = []
     for ivar in range(len(z_variations)):
-        fup = R.TF1("fup_"+str(ivar), fitChoice, fitRange[0], 3000, npar)
+        fup = R.TF1("fup_"+str(ivar), fitChoice, fitRange[0], 5000, npar)
         fup.SetParameters( z_variations[ivar][0] )
         fup.SetLineColor(colorlist[ivar])
         if makePlots:
             fup.Draw("same")
 
-        fdw = R.TF1("fdw_"+str(ivar), fitChoice, fitRange[0], 3000, npar)
+        fdw = R.TF1("fdw_"+str(ivar), fitChoice, fitRange[0], 5000, npar)
         fdw.SetParameters( z_variations[ivar][1] )
         fdw.SetLineColor( colorlist[ivar] )
         if makePlots:
@@ -108,18 +108,12 @@ def MakeSmoothHisto(hist, fitCurve):
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
 
-    # temporary hack by Qi
-    fitCurve.SetRange(low, 5000)
-
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
     for ibin in range(1, hist_smooth.GetNbinsX()+1):
         if hist_smooth.GetBinCenter(ibin) >= low:
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
     hist_smooth.Add(fitCurve, 1.0)
-
-    # temporary hack by Qi
-    fitCurve.SetRange(low, high)
 
     return hist_smooth
 
