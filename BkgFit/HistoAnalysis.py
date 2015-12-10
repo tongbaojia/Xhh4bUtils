@@ -12,6 +12,7 @@ from HistoTools import HistLocationString as HistLocStr
 func1 = None
 func2 = None
 
+# rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
 def HistoAnalysis(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "DiJetMass",
@@ -22,6 +23,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
                   nbtag_top_shape = None,
+                  rebinFinal = None,
                   verbose = False):
 
     global func1
@@ -130,7 +132,7 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
         qcd_int = qcd_r.Integral()
-        #qcd_r.Add( top_2b, -1)
+        qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
 
         top_r = histos[r]["top"].Clone("top__"+r)
         if nbtag_top_shape =="3":
@@ -156,8 +158,15 @@ def HistoAnalysis(datafileName="hist_data.root",
         qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
         top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
 
-        outfileStat.WriteTObject(qcd_final, "qcd_hh_nominal","Overwrite")
-        outfileStat.WriteTObject(top_final, "top_hh_nominal","Overwrite")
+        if rebinFinal is not None:
+            qcd_final = qcd_final.Rebin(len(rebinFinal)-1, qcd_final.GetName()+"_rebinFinal", rebinFinal)
+            top_final = top_final.Rebin(len(rebinFinal)-1, top_final.GetName()+"_rebinFinal", rebinFinal)
+
+        # outfileStat.WriteTObject(qcd_final, "qcd_hh_nominal","Overwrite")
+        # outfileStat.WriteTObject(top_final, "top_hh_nominal","Overwrite")
+
+        outfileStat.WriteTObject(qcd_final, "qcd_hh","Overwrite")
+        outfileStat.WriteTObject(top_final, "ttbar_hh","Overwrite")
 
         
 
@@ -166,15 +175,32 @@ def HistoAnalysis(datafileName="hist_data.root",
             qup = qcd_sm["vars"][ivar][0]
             qdw = qcd_sm["vars"][ivar][1]
 
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qup), "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(qcd_r, qdw), "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
+            qcd_r_qup = smoothfit.MakeSmoothHisto(qcd_r, qup)
+            qcd_r_qdw = smoothfit.MakeSmoothHisto(qcd_r, qdw)
+
+            if rebinFinal is not None:
+                qcd_r_qup = qcd_r_qup.Rebin(len(rebinFinal)-1, qcd_r_qup.GetName()+"_rebinFinal", rebinFinal)
+                qcd_r_qdw = qcd_r_qdw.Rebin(len(rebinFinal)-1, qcd_r_qdw.GetName()+"_rebinFinal", rebinFinal)
+
+            outfileStat.WriteTObject(qcd_r_qup, "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(qcd_r_qdw, "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
 
         for ivar in range(len(top_sm["vars"])):
             tup = top_sm["vars"][ivar][0]
             tdw = top_sm["vars"][ivar][1]
 
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tup), "top_hh_smoothT"+str(ivar)+"Up","Overwrite")
-            outfileStat.WriteTObject(smoothfit.MakeSmoothHisto(top_r, tdw), "top_hh_smoothT"+str(ivar)+"Down","Overwrite")
+            top_r_tup = smoothfit.MakeSmoothHisto(top_r, tup)
+            top_r_tdw = smoothfit.MakeSmoothHisto(top_r, tdw)
+
+            if rebinFinal is not None:
+                top_r_tup = top_r_tup.Rebin(len(rebinFinal)-1, top_r_tup.GetName()+"_rebinFinal", rebinFinal)
+                top_r_tdw = top_r_tdw.Rebin(len(rebinFinal)-1, top_r_tdw.GetName()+"_rebinFinal", rebinFinal)
+
+            # outfileStat.WriteTObject(top_r_tup, "top_hh_smoothT"+str(ivar)+"Up","Overwrite")
+            # outfileStat.WriteTObject(top_r_tdw, "top_hh_smoothT"+str(ivar)+"Down","Overwrite")
+
+            outfileStat.WriteTObject(top_r_tup, "ttbar_hh_smoothT"+str(ivar)+"Up","Overwrite")
+            outfileStat.WriteTObject(top_r_tdw, "ttbar_hh_smoothT"+str(ivar)+"Down","Overwrite")
 
 
             
@@ -201,9 +227,14 @@ def HistoAnalysis(datafileName="hist_data.root",
                 qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
                 tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
 
+                if rebinFinal is not None:
+                    qvar_final = qvar_final.Rebin(len(rebinFinal)-1, qvar_final.GetName()+"_rebinFinal", rebinFinal)
+                    tvar_final = tvar_final.Rebin(len(rebinFinal)-1, tvar_final.GetName()+"_rebinFinal", rebinFinal)
+
                 UpDw = ("Up" if iUD ==0 else "Down")
                 outfileStat.WriteTObject(qvar_final, "qcd_hh_normY"+str(ivar)+UpDw,"Overwrite")
-                outfileStat.WriteTObject(tvar_final, "top_hh_normY"+str(ivar)+UpDw,"Overwrite")
+                # outfileStat.WriteTObject(tvar_final, "top_hh_normY"+str(ivar)+UpDw,"Overwrite")
+                outfileStat.WriteTObject(tvar_final, "ttbar_hh_normY"+str(ivar)+UpDw,"Overwrite")
             
         
         

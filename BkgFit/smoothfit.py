@@ -108,12 +108,18 @@ def MakeSmoothHisto(hist, fitCurve):
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
 
+    # temporary hack by Qi
+    fitCurve.SetRange(low, 5000)
+
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
     for ibin in range(1, hist_smooth.GetNbinsX()+1):
         if hist_smooth.GetBinCenter(ibin) >= low:
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
     hist_smooth.Add(fitCurve, 1.0)
+
+    # temporary hack by Qi
+    fitCurve.SetRange(low, high)
 
     return hist_smooth
 
