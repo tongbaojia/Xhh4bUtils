@@ -13,6 +13,8 @@ func1 = None
 func2 = None
 
 # rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
+# nbtag_top_shape_normFit --- what top shape to be used in NORMALIZATION FIT?
+# nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
 def HistoAnalysis(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "DiJetMass",
@@ -22,7 +24,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                   NRebin = 1,
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
-                  nbtag_top_shape = None,
+                  nbtag_top_shape_normFit = None,
+                  nbtag_top_shape_SRPred = None,
                   rebinFinal = None,
                   verbose = False):
 
@@ -47,6 +50,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     
     n_rebin     = NRebin
 
+    nbtag_top_shape = nbtag_top_shape_SRPred
     topShape_nbtag = nbtag_top_shape
     if nbtag_top_shape == None:
         topShape_nbtag = num_btag
@@ -74,7 +78,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                                       NRebin = NRebin,
                                       use_one_top_nuis = use_one_top_nuis,
                                       use_scale_top_2b = use_scale_top_2b,
-                                      nbtag_top_shape = nbtag_top_shape,
+                                      nbtag_top_shape = nbtag_top_shape_normFit,
                                       makePlots = True,
                                       verbose = verbose )
 
@@ -135,7 +139,7 @@ def HistoAnalysis(datafileName="hist_data.root",
         qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
 
         top_r = histos[r]["top"].Clone("top__"+r)
-        if nbtag_top_shape =="3":
+        if (nbtag_top_shape =="3") and (r == "44"):   # the 3b top shape is only used during the SR prediction for 44 region
             temp_scaler = top_r.Integral() / histos[r_3b]["top"].Integral()
             top_r = histos[r_3b]["top"].Clone("top__"+r)
             top_r.Scale( temp_scaler )

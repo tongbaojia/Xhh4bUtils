@@ -19,7 +19,7 @@ h_data = {}
 useOneTopNuis = None
 scaleTop2b = None
 
-
+# Important! Once nbtag_top_shape is set, then corresponding top shape will be used even in SB fitting!!
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "LeadCaloJetM",

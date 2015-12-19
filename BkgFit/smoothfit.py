@@ -5,6 +5,7 @@ from array import array
 
 from GetEigenVariations import GetEigenVariations
 
+import cPickle as pickle
 
 def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="fit.root"):
     npar = None
@@ -91,6 +92,15 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
 
     if makePlots:
         c.SaveAs(outfileName)
+
+        fTxT = open(outfileName[:-5]+".pkl", "w")
+        fitResultDict = {
+          "params": params,
+          "cov": cov,
+        }
+        pickle.dump(fitResultDict, fTxT)
+        fTxT.close()
+
     
     return {"nom": drawFunc, "vars":fvar}
 
