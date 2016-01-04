@@ -2,9 +2,12 @@
 def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP="77", massRegion="SB", whichFunc="SLAC"):
     output = None
     
-    if whichFunc=="SLAC":
+    if whichFunc == "SLAC":
         output = "GoodEvent_Pass" + ntrackjet + "GoodTrackJetPass" + nbtag + "b" + btagWP +"Pass"+massRegion+"Mass/"+distName
         #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
+    elif whichFunc == "XhhBoosted":
+        word_dict = {"4": "Four", "3" : "Three", "2" : "Two"}
+        output = word_dict[nbtag] + "Tag_" + massRegion + "/" + distName
 
     return output
 
