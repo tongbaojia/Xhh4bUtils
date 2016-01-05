@@ -25,7 +25,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   use_one_top_nuis = False,
                   use_scale_top_2b = False,
                   nbtag_top_shape_normFit = None,
-                  nbtag_top_shape_SRPred = None,
+                  nbtag_top_shape_SRPred = "3",
                   rebinFinal = None,
                   verbose = False):
 

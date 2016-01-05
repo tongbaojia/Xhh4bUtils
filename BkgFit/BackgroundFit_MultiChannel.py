@@ -19,7 +19,7 @@ h_data = {}
 useOneTopNuis = None
 scaleTop2b = None
 
-# Important! Once nbtag_top_shape is set, then corresponding top shape will be used even in SB fitting!!
+
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   distributionName= "LeadCaloJetM",
@@ -31,8 +31,7 @@ def BackgroundFit(datafileName="hist_data.root",
                   use_scale_top_2b = False,
                   nbtag_top_shape = None,
                   makePlots = True,
-                  verbose = True,
-                  whichFunc = "SLAC" ):
+                  verbose = True ):
     
     global h_qcd
     global h_top
@@ -91,7 +90,7 @@ def BackgroundFit(datafileName="hist_data.root",
 
     # collect all histograms
     for r in ["44","43","42","33","32"]:
-        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, ("SB" if whichFunc == "SLAC" else "Sideband"), whichFunc)  #folder( r[0], r[1], btag_WP)
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
 
@@ -248,7 +247,7 @@ def MakePlot(region, muqcd, topscale):
     h_data2.Draw("sameE")
 
     leg = R.TLegend(0.1,0.7,0.48,0.9)
-    leg.AddEntry(h_data2,"Data ("+region+"), 1.4 fb^{-1}","EL")
+    leg.AddEntry(h_data2,"Data ("+region+"), 3.2 fb^{-1}","EL")
     leg.AddEntry(h_top2,"ttbar MC","F")
     leg.AddEntry(h_qcd2,"QCD model","L")
     leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
