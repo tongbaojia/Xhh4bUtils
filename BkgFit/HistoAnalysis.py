@@ -66,6 +66,18 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
 
+    
+    ##### Storage Variables ############################################
+    Nbkg_dict    = {  }
+    Nbkg_SysList = {  }
+    for ir in regions:
+        Nbkg_dict[ir]    = { "qcd":0,  "top":0,  "bkg":0 }
+        Nbkg_SysList[ir] = { "qcd":[], "top":[], "bkg":[] }
+
+
+    vartxt = ''
+    ##################################################################
+
 
     
     ##### Do Background Fits ############################################
@@ -135,8 +147,9 @@ def HistoAnalysis(datafileName="hist_data.root",
             top_2b.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
 
         qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
-        qcd_int = qcd_r.Integral()
         qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
+        qcd_int = qcd_r.Integral()
+
 
         top_r = histos[r]["top"].Clone("top__"+r)
         if (nbtag_top_shape =="3") and (r == "44"):   # the 3b top shape is only used during the SR prediction for 44 region
@@ -152,7 +165,19 @@ def HistoAnalysis(datafileName="hist_data.root",
         qcd_r.Scale( mu_qcd )
         top_r.Scale( top_scale )
 
+        # store some numbers for table later
+        e_qcd = R.Double(0.0)
+        e_top = R.Double(0.0)
+        Nbkg_dict[r]["qcd"] = qcd_r.IntegralAndError(0, qcd_r.GetNbinsX()+1, e_qcd)
+        Nbkg_dict[r]["top"] = top_r.IntegralAndError(0, top_r.GetNbinsX()+1, e_top)
+        Nbkg_dict[r]["bkg"] = Nbkg_dict[r]["qcd"] + Nbkg_dict[r]["top"]
 
+
+        Nbkg_SysList[r]["qcd"].append( float(e_qcd) )
+        Nbkg_SysList[r]["top"].append( float(e_top) )
+        Nbkg_SysList[r]["bkg"].append( np.sqrt(float(e_qcd)**2 + float(e_top)**2) )
+        
+        
 
         ## Now do smoothing
 
@@ -211,15 +236,25 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         ### propagate correlated systematics from normalization fits for mu_qcd and top_scale ###############
         for ivar in range(len(pvars)):
+            sys_qcd = []
+            sys_top = []
+            sys_bkg = []
             for iUD in range(2):
                 mu_qcd_var = pvars[ivar][iUD][ir]
                 top_scale_var = pvars[ivar][iUD][n_channels + (0 if use_one_top_nuis else ir) ]
 
                 qvar = qcd_r.Clone("qvar")
                 qvar.Scale( mu_qcd_var * qcd_int / qvar.Integral() )
-
+                
                 tvar = top_r.Clone("tvar")
                 tvar.Scale( top_scale_var * top_int / tvar.Integral() )
+
+                ### store some numbers for table
+                sys_qcd.append( qvar.Integral() - Nbkg_dict[r]["qcd"] )
+                sys_top.append( tvar.Integral() - Nbkg_dict[r]["top"] )
+                sys_bkg.append( qvar.Integral() + tvar.Integral() - Nbkg_dict[r]["bkg"] )
+
+                #vartxt = vartxt + str(r) + ' ' + str(ivar) + ' ' + str(iUD) + ' ' + str(qvar.Integral()) + ' ' + str(tvar.Integral()) + ' ' + str( (qvar.Integral() + tvar.Integral())) + '\n'
 
                 ## Now do smoothing
 
@@ -239,13 +274,24 @@ def HistoAnalysis(datafileName="hist_data.root",
                 outfileStat.WriteTObject(qvar_final, "qcd_hh_normY"+str(ivar)+UpDw,"Overwrite")
                 # outfileStat.WriteTObject(tvar_final, "top_hh_normY"+str(ivar)+UpDw,"Overwrite")
                 outfileStat.WriteTObject(tvar_final, "ttbar_hh_normY"+str(ivar)+UpDw,"Overwrite")
-            
-        
+
+                
+            # store some numbers for table later
+            e_qcd_i = np.max( np.abs(sys_qcd) )
+            e_top_i = np.max( np.abs(sys_top) )
+            e_bkg_i = np.max( np.abs(sys_bkg) )
+
+
+            Nbkg_SysList[r]["qcd"].append( e_qcd_i )
+            Nbkg_SysList[r]["top"].append( e_top_i )
+            Nbkg_SysList[r]["bkg"].append( e_bkg_i )
+
+
         
         outfileStat.Close()
         
-
-        
+    PrintTable( Nbkg_dict, Nbkg_SysList, regions)
+    print vartxt
 
         ## if False:
         ##     pred_final = qcd_final.Clone("pred_final__"+r)
@@ -299,6 +345,86 @@ def FuncSum(x):
     return ( func1.Eval(x[0]) + func2.Eval(x[0]))
 
 
+
+
+
+def PrintTable( Nbkg_dict, Nbkg_SysList, Regions):
+
+    
+    e_qcd_tot = {}
+    e_top_tot = {}
+    e_bkg_tot = {}
+
+    for iR in Regions:
+        e_qcd_tot[iR] = 0
+        e_top_tot[iR] = 0
+        e_bkg_tot[iR] = 0
+
+        for ierr in range(len(Nbkg_SysList[iR]["qcd"])):
+            e_qcd_tot[iR] = e_qcd_tot[iR] + Nbkg_SysList[iR]["qcd"][ierr]**2
+            e_top_tot[iR] = e_top_tot[iR] + Nbkg_SysList[iR]["top"][ierr]**2
+            e_bkg_tot[iR] = e_bkg_tot[iR] + Nbkg_SysList[iR]["bkg"][ierr]**2
+
+        e_qcd_tot[iR] = np.sqrt(e_qcd_tot[iR])
+        e_top_tot[iR] = np.sqrt(e_top_tot[iR])
+        e_bkg_tot[iR] = np.sqrt(e_bkg_tot[iR])
+
+
+    columnStructure = '| l |'
+    for ic in range(len(Regions)):
+        columnStructure = columnStructure + ' c |'
+
+        
+    outtext = ''
+    outtext  = outtext + ' \n'
+    outtext  = outtext + ' \n'
+    outtext  = outtext + '\\begin{table}[htbp!] \n'
+    outtext  = outtext + '\\begin{center} \n'
+    outtext  = outtext + '\\begin{tabular}{' + columnStructure + ' } \n'
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + ' Sample '
+    for iR in Regions:
+        outtext  = outtext + ' & ' + iR[1] + 'b SR Prediction '
+    outtext  = outtext + ' \\\\ \n'
+    
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + '\\hline \n'
+    
+    outtext  = outtext + 'QCD '
+    for iR in Regions:
+        outtext  = outtext + ' & ' + str(float('%.3g' % Nbkg_dict[iR]["qcd"] )) + ' $\pm$ ' + str(float('%.3g' % e_qcd_tot[iR] ))
+    outtext  = outtext + ' \\\\ \n'
+    
+    outtext  = outtext + '$ t \\bar{t}$ '
+    for iR in Regions:
+        outtext  = outtext + ' & ' + str(float('%.3g' % Nbkg_dict[iR]["top"] )) + ' $\pm$ ' + str(float('%.3g' % e_top_tot[iR] ))
+    outtext  = outtext + ' \\\\ \n'
+
+    
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + 'Total '
+    for iR in Regions:
+        outtext  = outtext + ' & ' + str(float('%.3g' % Nbkg_dict[iR]["bkg"] )) + ' $\pm$ ' + str(float('%.3g' % e_bkg_tot[iR] ))
+    outtext  = outtext + ' \\\\ \n'
+    
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + 'Data '
+    for iR in Regions:
+        outtext  = outtext + ' & ' + ' [BLINDED] '
+    outtext  = outtext + ' \\\\ \n'
+
+
+    outtext  = outtext + '\\hline \n'
+    outtext  = outtext + '\\end{tabular}  \n'
+    outtext  = outtext + '\\caption{Background predictions in SR}  \n'
+    outtext  = outtext + '\\label{tab:boosted-SR-yields-wsys}  \n'
+    outtext  = outtext + '\\end{center}  \n'
+    outtext  = outtext + '\\end{table}  \n'
+    outtext  = outtext + '  \n'
+    outtext  = outtext + '  \n'
+
+    print outtext
 
 if __name__=="__main__":
     HistoAnalysis()
