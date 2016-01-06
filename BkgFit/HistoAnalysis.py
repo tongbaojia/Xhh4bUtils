@@ -6,6 +6,8 @@ from copy import deepcopy
 import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 
+import QCDSystematics as QCDSyst
+
 from HistoTools import HistLocationString as HistLocStr
 
 
@@ -95,6 +97,25 @@ def HistoAnalysis(datafileName="hist_data.root",
                                       verbose = verbose )
 
     pvars = bkgFitResults["pvars"]
+    ##################################################################
+
+
+    ##### Get QCD Shape Systematics from CR  ##############################
+    QCDSyst_Dict = QCDSyst.QCDSystematics(datafileName=datafileName,
+                                            topfileName=topfileName,
+                                            distributionName= dist_name,
+                                            n_trkjet  = n_trkjet,
+                                            n_btag    = n_btag,
+                                            btag_WP     = btag_WP,
+                                            mu_qcd_vals = bkgFitResults["muqcd"],
+                                            topscale_vals = bkgFitResults["topscale"],
+                                            NRebin = NRebin,
+                                            use_one_top_nuis = use_one_top_nuis,
+                                            use_scale_top_2b = use_scale_top_2b,
+                                            makePlots = True,
+                                            verbose = True,
+                                            outfileNameBase="QCDSysfit.root")
+
     ##################################################################
 
 
