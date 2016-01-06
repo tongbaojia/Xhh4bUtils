@@ -116,14 +116,14 @@ def QCDSystematics(datafileName="hist_data.root",
         bkg_r = qcd_r.Clone("bkg__"+r)
         bkg_r.Add( top_r )
 
-        c=R.TCanvas()
-        bkg_r_c = bkg_r.Clone("bkg_clone__"+r)
-        bkg_r_c.SetDirectory(0)
-        bkg_r_c.Draw("HISTs")
-        data_r_c = histos[r]["data"].Clone("data_clone__"+r)
-        data_r_c.SetDirectory(0)
-        data_r_c.Draw("sames")
-        c.SaveAs(dist_name+"_CR_Quick_"+r+".root")
+        ## c=R.TCanvas()
+        ## bkg_r_c = bkg_r.Clone("bkg_clone__"+r)
+        ## bkg_r_c.SetDirectory(0)
+        ## bkg_r_c.Draw("HISTs")
+        ## data_r_c = histos[r]["data"].Clone("data_clone__"+r)
+        ## data_r_c.SetDirectory(0)
+        ## data_r_c.Draw("sames")
+        ## c.SaveAs(dist_name+"_CR_Quick_"+r+".root")
         
 
         #bkg_r.Divide( histos[r]["data"] )
