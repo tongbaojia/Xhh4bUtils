@@ -175,15 +175,20 @@ def QCDSystematics(datafileName="hist_data.root",
         params = np.asarray( params_array )
 
 
-        fup = R.TF1("QCDShape_fup_"+r, fitChoice, fitRange[0], fitRange[1], npar)
+        outRange = [500, 3500]
+
+        fcen = R.TF1("QCDShape_f_"+r, fitChoice, outRange[0], outRange[1], npar)
+        fcen.SetParameters( params )
+
+        fup = R.TF1("QCDShape_fup_"+r, fitChoice, outRange[0], outRange[1], npar)
         fup.SetParameters( params[0] - np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] + np.sqrt(cov[1,1]) )
         fup.SetLineColor(R.kBlue)
 
-        fdw = R.TF1("QCDShape_fdw_"+r, fitChoice, fitRange[0], fitRange[1], npar)
+        fdw = R.TF1("QCDShape_fdw_"+r, fitChoice, outRange[0], outRange[1], npar)
         fdw.SetParameters( params[0] + np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] - np.sqrt(cov[1,1]) )
         fdw.SetLineColor(R.kBlue)
 
-        QCDSyst_Dict["Shape_"+r] = {"f":fitFunc, "fup":fup, "fdw":fdw}
+        QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) ) #scale is max of ratio non-unity and CR stat error
 
         if makePlots:
@@ -210,6 +215,11 @@ def LinearFunc(x, par):
 
 
 '''
+derivation of constant term under variation of slope,
+which should keep overall normalization fixed 
+by ensuring that the scaling function has the same integral
+before and after slope change
+
 int_l^h a + bx = ax + bx^2 / 2  (l...h) = a*(h-l) + b/2 * (h^2 - l^2)
 
 a*(h-l) + b/2 * (h^2 - l^2) = z*(h-l) + (b+d)/2 * (h^2 - l^2)
