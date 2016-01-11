@@ -36,7 +36,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                   doSmoothing = True,
                   isSystematicVariation = False,
                   verbose = False,
-                  makeOutputFiles = False):
+                  makeOutputFiles = False,
+                  MassRegionName = "SR"):
 
     global func1
     global func2
@@ -122,24 +123,28 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
     ##### Get QCD Shape Systematics from CR  ##############################
-    if inputQCDSyst_Dict == None and distributionName=="DiJetMass":
-        QCDSyst_Dict = QCDSyst.QCDSystematics(datafileName=datafileName,
-                                                topfileName=topfileName,
-                                                distributionName= dist_name,
-                                                n_trkjet  = n_trkjet,
-                                                n_btag    = n_btag,
-                                                btag_WP     = btag_WP,
-                                                mu_qcd_vals = bkgFitResults["muqcd"],
-                                                topscale_vals = bkgFitResults["topscale"],
-                                                NRebin = NRebin,
-                                                use_one_top_nuis = use_one_top_nuis,
-                                                use_scale_top_2b = use_scale_top_2b,
-                                                makePlots = True,
-                                                verbose = verbose,
-                                                outfileNameBase="QCDSysfit.root")
-    elif inputQCDSyst_Dict != None:
-        QCDSyst_Dict = inputQCDSyst_Dict
+    if MassRegionName == "SR":
+        # should only affect SR
+        if inputQCDSyst_Dict == None and distributionName=="DiJetMass":
+            QCDSyst_Dict = QCDSyst.QCDSystematics(datafileName=datafileName,
+                                                    topfileName=topfileName,
+                                                    distributionName= dist_name,
+                                                    n_trkjet  = n_trkjet,
+                                                    n_btag    = n_btag,
+                                                    btag_WP     = btag_WP,
+                                                    mu_qcd_vals = bkgFitResults["muqcd"],
+                                                    topscale_vals = bkgFitResults["topscale"],
+                                                    NRebin = NRebin,
+                                                    use_one_top_nuis = use_one_top_nuis,
+                                                    use_scale_top_2b = use_scale_top_2b,
+                                                    makePlots = True,
+                                                    verbose = verbose,
+                                                    outfileNameBase="QCDSysfit.root")
+        elif inputQCDSyst_Dict != None:
+            QCDSyst_Dict = inputQCDSyst_Dict
 
+        else:
+            QCDSyst_Dict = None
     else:
         QCDSyst_Dict = None
 
@@ -159,7 +164,8 @@ def HistoAnalysis(datafileName="hist_data.root",
     
     # collect all histograms
     for r in ["44","43","42","33","32"]:
-        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+        # folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, MassRegionName)  #folder( r[0], r[1], btag_WP)
         
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
@@ -204,7 +210,7 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
         top_r = histos[r]["top"].Clone("top__"+r)
-        if (nbtag_top_shape =="3") and (r == "44"):   # the 3b top shape is only used during the SR prediction for 44 region
+        if (nbtag_top_shape =="3") and (r == "44") and (MassRegionName == "SR"):   # the 3b top shape is only used during the SR prediction for 44 region
             temp_scaler = top_r.Integral() / histos[r_3b]["top"].Integral()
             top_r = histos[r_3b]["top"].Clone("top__"+r)
             top_r.Scale( temp_scaler )
@@ -227,7 +233,7 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         Nbkg_SysList[r]["qcd"].append( float(e_qcd) )
         Nbkg_SysList[r]["top"].append( float(e_top) )
-        Nbkg_SysList[r]["bkg"].append( np.sqrt(float(e_qcd)**2 + float(e_top)**2) )
+        Nbkg_SysList[r]["bkg"].append( np.sqrt(float(e_qcd)**2 + float(e_top)**2) )   # Qi Question
         
         
 
@@ -388,7 +394,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
             qvar_shape_up.Multiply( QCDSyst_Dict["Shape_"+r]["fup"] )
-            qvar_shape_up.Scale( qcd_r.Integral() / qvar_shape_up.Integral() )
+            qvar_shape_up.Scale( qcd_r.Integral() / qvar_shape_up.Integral() ) # Qi Question: Why? This will lead to 0 systematics. Removing it will give some non-zero systematics (on event number estimation)
 
             qvar_shape_dw = qcd_r.Clone("qvar_QCDshape_dw")
             qvar_shape_dw.Multiply( QCDSyst_Dict["Shape_"+r]["fdw"] )
@@ -461,6 +467,8 @@ def HistoAnalysis(datafileName="hist_data.root",
     #print vartxt
 
     #print output_Dict
+
+    output_Dict['regions'] = regions
 
     return output_Dict
 

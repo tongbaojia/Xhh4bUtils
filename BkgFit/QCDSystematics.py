@@ -153,7 +153,7 @@ def QCDSystematics(datafileName="hist_data.root",
         func.SetParameters(1.0, 0.0)
 
         Vmode = ("Q" if not verbose else "")
-        fitResult = ratio.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1])
+        fitResult = ratio.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1]) # Qi Question: Why we fit on data/TotalBkgEst ? Shouldn't we fit on (data-ttbar)/(QCD Est.) ? Afterare, this is what we applied in SR
 
         
         if fitResult.Status() != 0:
@@ -189,7 +189,7 @@ def QCDSystematics(datafileName="hist_data.root",
         fdw.SetLineColor(R.kBlue)
 
         QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
-        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) ) #scale is max of ratio non-unity and CR stat error
+        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) ) #scale is max of ratio non-unity and CR stat error # Qi Question. histos[r]["data"] has become the ratio before?!
 
         if makePlots:
             c=R.TCanvas()
