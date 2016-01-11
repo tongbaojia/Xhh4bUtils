@@ -7,7 +7,7 @@ import sys
 import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 
-import QCDSystematics as QCDSyst
+import SystematicsTools as SystTools
 
 from HistoTools import HistLocationString as HistLocStr
 
@@ -126,7 +126,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     if MassRegionName == "SR":
         # should only affect SR
         if inputQCDSyst_Dict == None and distributionName=="DiJetMass":
-            QCDSyst_Dict = QCDSyst.QCDSystematics(datafileName=datafileName,
+            QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
                                                     topfileName=topfileName,
                                                     distributionName= dist_name,
                                                     n_trkjet  = n_trkjet,
