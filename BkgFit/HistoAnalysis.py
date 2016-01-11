@@ -2,6 +2,7 @@ import ROOT as R
 
 import numpy as np
 from copy import deepcopy
+import sys
 
 import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
@@ -29,6 +30,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   nbtag_top_shape_normFit = None,
                   nbtag_top_shape_SRPred = "3",
                   rebinFinal = None,
+                  smoothing_func = "Exp",
                   inputFitResult = None,
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
@@ -231,8 +233,8 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         ## Now do smoothing
         if do_smoothing:
-            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = "Exp", fitRange = (900, 2000), makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = "Exp", fitRange = (850, 1200), makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
+            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = (900, 3000), makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = (850, 1500), makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
     
             qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
             top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
@@ -340,9 +342,9 @@ def HistoAnalysis(datafileName="hist_data.root",
 
                 ## Now do smoothing
                 if do_smoothing:
-                    qvar_sm = smoothfit.smoothfit(qvar, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose,
+                    qvar_sm = smoothfit.smoothfit(qvar, fitFunction = smoothing_func, fitRange = (900, 3000), makePlots = False, verbose = verbose,
                                                   outfileName="qcd_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
-                    tvar_sm = smoothfit.smoothfit(tvar, fitFunction = "Exp", fitRange = (850, 1200), makePlots = False, verbose = verbose,
+                    tvar_sm = smoothfit.smoothfit(tvar, fitFunction = smoothing_func, fitRange = (850, 1500), makePlots = False, verbose = verbose,
                                                   outfileName="top_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
 
                     qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
@@ -394,10 +396,10 @@ def HistoAnalysis(datafileName="hist_data.root",
 
             ## Now do smoothing
             if do_smoothing:
-                qvar_shape_up_sm = smoothfit.smoothfit(qvar_shape_up, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose,
+                qvar_shape_up_sm = smoothfit.smoothfit(qvar_shape_up, fitFunction = smoothing_func, fitRange = (900, 3000), makePlots = False, verbose = verbose,
                                                         outfileName="qcd_smoothfit_"+r+"_QCDShapeUp.root")
 
-                qvar_shape_dw_sm = smoothfit.smoothfit(qvar_shape_dw, fitFunction = "Exp", fitRange = (900, 2000), makePlots = False, verbose = verbose,
+                qvar_shape_dw_sm = smoothfit.smoothfit(qvar_shape_dw, fitFunction = smoothing_func, fitRange = (900, 3000), makePlots = False, verbose = verbose,
                                                         outfileName="qcd_smoothfit_"+r+"_QCDShapeDown.root")
 
                 qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"])

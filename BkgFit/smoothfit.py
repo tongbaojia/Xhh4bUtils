@@ -2,6 +2,7 @@ import ROOT as R
 
 import numpy as np
 from array import array
+import sys
 
 from GetEigenVariations import GetEigenVariations
 
@@ -18,27 +19,56 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     if fitFunction == "Exp":
         npar = 2
         fitChoice = ExpoFunc
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 2)
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
         func.SetParameters(0.006, 5.0)
 
     elif fitFunction == "Dijet":
         npar = 3
         fitChoice = DijetFunc
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 3)
-        func.SetParameters(0.3, 30, -3)
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
+        func.SetParameters(1, 10, 1)
+
+    elif fitFunction == "MJ2":
+        npar = 3
+        fitChoice = MJ2Func
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
+        func.SetParameters(1, 10, 1)
+
+    elif fitFunction == "MJ3":
+        npar = 3
+        fitChoice = MJ3Func
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
+        func.SetParameters(1, 10, 1)
+
+    elif fitFunction == "MJ4":
+        npar = 3
+        fitChoice = MJ4Func
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
+        func.SetParameters(1, 10, 1)
 
     Vmode = ("Q" if not verbose else "")
     fitResult = histo.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1])
 
     if fitResult.Status() != 0:
         print "Error in smoothing fit: did not terminate properly. Exiting"
+        c=R.TCanvas()
+        #R.SetOwnership(c,False)
+        histo.Draw()
+        c.SaveAs("failed__"+outfileName)
         sys.exit(0)
+            
     
     cov_TMatrix = fitResult.GetCovarianceMatrix()
     cov = np.zeros( (npar, npar) )
+    corr = np.zeros( (npar, npar) )
     for i in range(npar):
         for j in range(npar):
             cov[i,j] = cov_TMatrix[i][j]
+            corr[i,j] = cov_TMatrix[i][j] / np.sqrt(cov_TMatrix[i][i] * cov_TMatrix[j][j])
+
+    #print "correlation matrix"
+    #print corr
+    
 
     S, U= np.linalg.eigh( cov )
     Sd = np.diag( S )
@@ -109,8 +139,24 @@ def ExpoFunc(x, par):
     return np.exp(-par[0]*x[0] + par[1])
 
 def DijetFunc(x, par):
-    return par[0] * np.power((1.0 - x[0] / 13000.0), par[1]) * np.power((x[0] / 13000.0), par[2])
+    z = x[0] / 13000.0
+    #return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2])
+    return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]* np.log(z)  )
 
+def MJ2Func(x, par):
+    #https://cds.cern.ch/record/2026080
+    z = x[0] / 13000.0
+    return np.exp(par[0] + par[1]* np.log((1.0 - x[0] / 13000.0)) + par[2]*(x[0] / 13000.0)**2  )
+
+def MJ3Func(x, par):
+    #https://cds.cern.ch/record/2026080
+    z = x[0] / 13000.0
+    return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]*z*np.log(z)  )
+
+def MJ4Func(x, par):
+    #https://cds.cern.ch/record/2026080
+    z = x[0] / 13000.0
+    return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2]*np.log(z))
 
 
 def MakeSmoothHisto(hist, fitCurve):
@@ -130,6 +176,6 @@ def MakeSmoothHisto(hist, fitCurve):
 
 if __name__=="__main__":
     datafile = R.TFile("hist_data.root ","READ")
-    h = datafile.Get("GoodEvent_Pass4GoodTrackJetPass2b80PassSRMass/DiJetMass").Clone()
-    smoothfit( h )
+    h = datafile.Get("GoodEvent_Pass4GoodTrackJetPass2b77PassSRMass/DiJetMass").Clone()
+    smoothfit( h, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = True, verbose = True )
     
