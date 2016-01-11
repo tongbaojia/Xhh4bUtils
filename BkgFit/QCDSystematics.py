@@ -111,6 +111,7 @@ def QCDSystematics(datafileName="hist_data.root",
         qcd_r.Scale( mu_qcd )
         top_r.Scale( top_scale )
 
+        N_qcd_r = qcd_r.Integral()
 
         #now do ratio
         bkg_r = qcd_r.Clone("bkg__"+r)
@@ -128,9 +129,17 @@ def QCDSystematics(datafileName="hist_data.root",
 
         #bkg_r.Divide( histos[r]["data"] )
         #ratio = bkg_r
+
+        ratio = histos[r]["data"].Clone("ratio__"+r)
+        ratio.SetDirectory(0)
+        ratio.Add( top_r, -1)
+
+        #store integral and error
+        Err_N_data_minus_top_r = R.Double(0)
+        N_data_minus_top_r = ratio.IntegralAndError(0, ratio.GetNbinsX()+1, Err_N_data_minus_top_r)
         
-        histos[r]["data"].Divide(  bkg_r )
-        ratio = histos[r]["data"]
+        #do division
+        ratio.Divide(  qcd_r )
 
         #search for last bin with data, will be used for upper fit range
         lastbin = 0
@@ -189,7 +198,10 @@ def QCDSystematics(datafileName="hist_data.root",
         fdw.SetLineColor(R.kBlue)
 
         QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
-        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) ) #scale is max of ratio non-unity and CR stat error # Qi Question. histos[r]["data"] has become the ratio before?!
+
+        #scale is max of ratio non-unity and CR stat error 
+        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_qcd_r - N_data_minus_top_r)/N_qcd_r,  (Err_N_data_minus_top_r / N_data_minus_top_r) ] ) )
+        #QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) )  #this one was bugged a bit, keep anyway
 
         if makePlots:
             c=R.TCanvas()
