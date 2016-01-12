@@ -11,7 +11,7 @@ from HistoTools import HistLocationString as HistLocStr
 
 def QCDSystematics(datafileName="hist_data.root",
                     topfileName="hist_ttbar.root",
-                    distributionName= "LeadCaloJetM",
+                    distributionName= "DiJetMass",
                     n_trkjet  = ["4","4"],
                     n_btag    = ["4","3"],
                     btag_WP     = "77",
@@ -149,41 +149,19 @@ def QCDSystematics(datafileName="hist_data.root",
                 break
 
         lastbin_Xval = ratio.GetBinLowEdge(lastbin) + ratio.GetBinWidth(lastbin)
-
-        #fitting
-        fitName = "fit_"+outfileNameBase[:-5]
-    
-        npar = 2
-        fitChoice = LinearFunc
-        #fitRange = [bkg_r.GetBinLowEdge(1),  bkg_r.GetBinLowEdge(bkg_r.GetNbinsX()) + bkg_r.GetBinWidth(bkg_r.GetNbinsX()) ]
         fitRange = [500, lastbin_Xval]
-        
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 2)
-        func.SetParameters(1.0, 0.0)
-
-        Vmode = ("Q" if not verbose else "")
-        fitResult = ratio.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1]) # Qi Question: Why we fit on data/TotalBkgEst ? Shouldn't we fit on (data-ttbar)/(QCD Est.) ? Afterare, this is what we applied in SR
 
         
-        if fitResult.Status() != 0:
-            print "Error in QCD Sys fit: did not terminate properly. Exiting"
-            sys.exit(0)
 
-        cov_TMatrix = fitResult.GetCovarianceMatrix()
-        cov = np.zeros( (npar, npar) )
-        for i in range(npar):
-            for j in range(npar):
-                cov[i,j] = cov_TMatrix[i][j]
+        ## fitting
+        fitName = "fit_"+outfileNameBase[:-5]
+        fitFunc, fitChoice, npar, params, cov = LinearFit(ratio, fitName, fitRange, verbose)
+
+
+
+
         
-
-        fitFunc = ratio.GetFunction(fitName)
-
-        params_array = array('d',[0]*npar)
-        fitFunc.GetParameters( params_array )
-
-        params = np.asarray( params_array )
-
-
+        ## Make fit variations, for shape uncertainties
         outRange = [500, 3500]
 
         fcen = R.TF1("QCDShape_f_"+r, fitChoice, outRange[0], outRange[1], npar)
@@ -220,6 +198,150 @@ def QCDSystematics(datafileName="hist_data.root",
     return QCDSyst_Dict
 
 
+
+def ttbarShapeSysSR(topfileName="hist_ttbar.root",
+                    distributionName= "DiJetMass",
+                    signal_region = "43",
+                    compare_region = "44",
+                    btag_WP     = "77",
+                    makePlots = False,
+                    verbose = False,
+                    outfileNameBase="TopShapeSRSysfit.root"):
+    
+
+    topfile  = R.TFile(topfileName,"READ")
+    
+    ## get top SR shape
+    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    top_sig    = topfile.Get(folder_sig).Clone("top_sig_"+signal_region)
+    top_sig.SetDirectory(0)
+    top_sig.Rebin(2)
+
+
+    ## get top comparison shape
+    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    top_comp    = topfile.Get(folder_comp).Clone("top_comp_"+compare_region)
+    top_comp.SetDirectory(0)
+    top_comp.Rebin(2)
+
+    ## remove negative values
+    ## assume same binning, else division won't work later
+    for ibin in range(1, top_sig.GetNbinsX()+1):
+        if top_sig.GetBinContent(ibin) < 0:
+            top_r.SetBinContent(ibin, 0)
+            top_r.SetBinError(ibin, 0)
+            
+        if top_comp.GetBinContent(ibin) < 0:
+            top_comp.SetBinContent(ibin, 0)
+            top_comp.SetBinError(ibin, 0)
+
+    ## normalize to same area
+    top_sig.Scale( 1.0 / top_sig.Integral() )
+    top_comp.Scale( 1.0 / top_comp.Integral() )
+
+    ## compute ratio
+    top_ratio = top_comp.Clone("top_ratio_sig"+signal_region+"_comp"+compare_region)
+    top_ratio.Divide( top_sig )
+
+    ## search for last bin with data, will be used for upper fit range
+    lastbin = 0
+    for ibin in reversed(range(top_ratio.GetNbinsX()+1)):
+        if top_ratio.GetBinContent(ibin) != 0:
+            lastbin = ibin
+            break
+
+    lastbin_Xval = top_ratio.GetBinLowEdge(lastbin) + top_ratio.GetBinWidth(lastbin)
+    #fitRange = [500, lastbin_Xval]
+    fitRange = [500, 1600]  ## reasonable range of bins with data
+
+    ## fitting
+    fitName = "fit_"+outfileNameBase[:-5]
+    fitFunc, fitChoice, npar, params, cov = LinearFit(top_ratio, fitName, fitRange, verbose)
+
+
+    ## Make fit variations, for shape uncertainties
+    outRange = [500, 3500]
+
+    fcen = R.TF1("ttbarShapeSR_f_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
+    fcen.SetParameters( params )
+
+    frev = R.TF1("ttbarShapeSR_frev_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
+    frev.SetParameters( 2 - params[0], -params[1] )
+    frev.SetLineColor(R.kOrange)
+
+    fneg = R.TF1("ttbarShapeSR_fneg_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
+    fneg.SetParameters(params[0], -params[1] )
+    fneg.SetLineColor(R.kMagenta)
+
+    fup = R.TF1("ttbarShapeSR_fup_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
+    fup.SetParameters( params[0] - np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] + np.sqrt(cov[1,1]) )
+    fup.SetLineColor(R.kBlue)
+
+    fdw = R.TF1("ttbarShapeSR_fdw_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
+    fdw.SetParameters( params[0] + np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] - np.sqrt(cov[1,1]) )
+    fdw.SetLineColor(R.kBlue)
+
+    ttbarShapeSRSyst_Dict = {"f":fcen, "frev":frev, "fup":fup, "fdw":fdw}
+
+    if makePlots:
+        c=R.TCanvas()
+        #R.SetOwnership(c,False)
+        top_ratio.SetLineColor(R.kBlack)
+        top_ratio.Draw()
+        fcen.Draw("same")
+        frev.Draw("same")
+        fneg.Draw("same")
+        fup.Draw("same")
+        fdw.Draw("same")
+        c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+compare_region+ ".root")
+
+
+    topfile.Close()
+    
+    return ttbarShapeSRSyst_Dict
+
+
+
+
+
+
+def LinearFit(histo, fitName, fitRange, verbose):
+
+    npar = 2
+    fitChoice = LinearFunc
+    #fitRange = [bkg_r.GetBinLowEdge(1),  bkg_r.GetBinLowEdge(bkg_r.GetNbinsX()) + bkg_r.GetBinWidth(bkg_r.GetNbinsX()) ]
+
+    func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], 2)
+    func.SetParameters(1.0, 0.0)
+
+    Vmode = ("Q" if not verbose else "")
+    fitResult = histo.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1]) 
+
+
+    if fitResult.Status() != 0:
+        print "Error in  SystematicsTools LinearFit: did not terminate properly. Exiting"
+        sys.exit(0)
+
+    cov_TMatrix = fitResult.GetCovarianceMatrix()
+    cov = np.zeros( (npar, npar) )
+    for i in range(npar):
+        for j in range(npar):
+            cov[i,j] = cov_TMatrix[i][j]
+
+
+    fitFunc = histo.GetFunction(fitName)
+
+    params_array = array('d',[0]*npar)
+    fitFunc.GetParameters( params_array )
+
+    params = np.asarray( params_array )
+
+    return fitFunc, fitChoice, npar, params, cov
+
+
+
+
+
 def LinearFunc(x, par):
     return (par[0] + par[1]*x[0])
 
@@ -242,4 +364,23 @@ z*(h-l) = a*(h-l) - (d)/2 * (h^2 - l^2) = a*(h-l) - (d)/2 * (h - l)*(h+l)
 
 z= a - d/2*(h+l)
 
+'''
+
+
+'''
+fine where ax + b = 1  then reverse slope around that point
+
+ax+b = 1
+x = (1-b)/a
+
+what is new offset, slope is -a?
+-ax + c = 1  when x = (1-b)/a
+
+-a(1-b)/a + c = 1
+b - 1 + c = 1
+c = 2-b
+
+check
+-ax + 2 - b
+-a(1-b)/a +2 - b = b-1 + 2 - b = 1  
 '''
