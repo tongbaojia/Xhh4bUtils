@@ -132,14 +132,14 @@ def QCDSystematics(datafileName="hist_data.root",
 
         ratio = histos[r]["data"].Clone("ratio__"+r)
         ratio.SetDirectory(0)
-        ratio.Add( top_r, -1)
+        #ratio.Add( top_r, -1)
 
         #store integral and error
         Err_N_data_minus_top_r = R.Double(0)
         N_data_minus_top_r = ratio.IntegralAndError(0, ratio.GetNbinsX()+1, Err_N_data_minus_top_r)
         
         #do division
-        ratio.Divide(  qcd_r )
+        ratio.Divide(  bkg_r )
 
         #search for last bin with data, will be used for upper fit range
         lastbin = 0
