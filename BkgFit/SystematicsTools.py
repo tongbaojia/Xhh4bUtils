@@ -117,6 +117,8 @@ def QCDSystematics(datafileName="hist_data.root",
         bkg_r = qcd_r.Clone("bkg__"+r)
         bkg_r.Add( top_r )
 
+        N_bkg_r = bkg_r.Integral()
+
         ## c=R.TCanvas()
         ## bkg_r_c = bkg_r.Clone("bkg_clone__"+r)
         ## bkg_r_c.SetDirectory(0)
@@ -135,8 +137,8 @@ def QCDSystematics(datafileName="hist_data.root",
         #ratio.Add( top_r, -1)
 
         #store integral and error
-        Err_N_data_minus_top_r = R.Double(0)
-        N_data_minus_top_r = ratio.IntegralAndError(0, ratio.GetNbinsX()+1, Err_N_data_minus_top_r)
+        Err_N_data_CR_r = R.Double(0)
+        N_data_CR_r = ratio.IntegralAndError(0, ratio.GetNbinsX()+1, Err_N_data_CR_r)
         
         #do division
         ratio.Divide(  bkg_r )
@@ -178,7 +180,7 @@ def QCDSystematics(datafileName="hist_data.root",
         QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
 
         #scale is max of ratio non-unity and CR stat error 
-        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_qcd_r - N_data_minus_top_r)/N_qcd_r,  (Err_N_data_minus_top_r / N_data_minus_top_r) ] ) )
+        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r) ] ) )
         #QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) )  #this one was bugged a bit, keep anyway
 
         if makePlots:
