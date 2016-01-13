@@ -8,13 +8,15 @@ from GetEigenVariations import GetEigenVariations
 
 import cPickle as pickle
 
+import time
+
 def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="fit.root"):
     npar = None
     func = None
     fitChoice = None
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink]
 
-    fitName = "fit_"+outfileName[:-5]
+    fitName = "fit_"+outfileName[:-5]+"_%s" % (time.time())  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
     
     if fitFunction == "Exp":
         npar = 2
