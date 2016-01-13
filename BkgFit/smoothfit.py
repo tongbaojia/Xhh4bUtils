@@ -125,6 +125,13 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     if makePlots:
         c=R.TCanvas()
         #R.SetOwnership(c,False)
+        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        leg.SetFillColor(0)
+        leg.AddEntry(histo, "Distribution", "LP")
+        leg.AddEntry(drawFunc, "Fit", "L")
+
+        histo.SetXTitle("m_{JJ} [GeV]")
+        histo.SetYTitle("Entries")
         histo.Draw()
         drawFunc.Draw("same")
 
@@ -135,6 +142,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         fup.SetLineColor(colorlist[ivar])
         if makePlots:
             fup.Draw("same")
+            leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
 
         fdw = R.TF1("fdw_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
         fdw.SetParameters( z_variations[ivar][1] )
@@ -148,6 +156,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     #raw_input()
 
     if makePlots:
+        leg.Draw("same")
         c.SaveAs(outfileName)
 
         fTxT = open(outfileName[:-5]+".pkl", "w")

@@ -19,6 +19,7 @@ h_data = {}
 useOneTopNuis = None
 scaleTop2b = None
 
+dist_name = None
 
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
@@ -40,6 +41,8 @@ def BackgroundFit(datafileName="hist_data.root",
     global useOneTopNuis
     global scaleTop2b
     global regions
+    global dist_name
+    
 
     ################### Parse  #########################
     dist_name   = distributionName
@@ -218,6 +221,8 @@ def MakePlot(region, muqcd, topscale):
     h_data2.SetFillColor(0)
     h_data2.SetLineColor(R.kBlack)
     h_data2.SetLineWidth(2)
+    h_data2.SetXTitle( "Leading jet mass [GeV]" if dist_name=="LeadCaloJetM" else dist_name)
+    h_data2.SetYTitle( "Entries" )
     #h_data2.Rebin(nrebin)
         
     h_top2 = h_top[region].Clone("top2_"+region)
@@ -239,6 +244,7 @@ def MakePlot(region, muqcd, topscale):
     h_pred.SetLineColor(R.kBlue)
     h_pred.SetFillColor(0)
     h_pred.SetLineWidth(1)
+
 
     h_data2.Draw("E")
     h_top2.Draw("sameHIST")

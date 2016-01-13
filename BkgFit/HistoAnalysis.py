@@ -433,6 +433,15 @@ def HistoAnalysis(datafileName="hist_data.root",
             qvar_shape_dw.Multiply( QCDSyst_Dict["Shape_"+r]["fdw"] )
             qvar_shape_dw.Scale( qcd_r.Integral() / qvar_shape_dw.Integral() )
 
+            for ibinX in range(1, qvar_shape_up.GetNbinsX()+1):
+                if(qvar_shape_up.GetBinContent(ibinX) < 0):
+                    qvar_shape_up.SetBinContent(ibinX, 0)
+                    qvar_shape_up.SetBinError(ibinX, 0)
+
+                if(qvar_shape_dw.GetBinContent(ibinX) < 0):
+                    qvar_shape_dw.SetBinContent(ibinX, 0)
+                    qvar_shape_dw.SetBinError(ibinX, 0)
+
             ## Now do smoothing
             if do_smoothing:
                 qvar_shape_up_sm = smoothfit.smoothfit(qvar_shape_up, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = False, verbose = verbose,
@@ -513,6 +522,16 @@ def HistoAnalysis(datafileName="hist_data.root",
             tvar_shape_dw = top_r.Clone("tvar_ttbarShapeSR_dw")
             tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["frev"] )
             tvar_shape_dw.Scale( top_r.Integral() / tvar_shape_dw.Integral() )
+
+
+            for ibinX in range(1, tvar_shape_up.GetNbinsX()+1):
+                if(tvar_shape_up.GetBinContent(ibinX) < 0):
+                    tvar_shape_up.SetBinContent(ibinX, 0)
+                    tvar_shape_up.SetBinError(ibinX, 0)
+
+                if(tvar_shape_dw.GetBinContent(ibinX) < 0):
+                    tvar_shape_dw.SetBinContent(ibinX, 0)
+                    tvar_shape_dw.SetBinError(ibinX, 0)
 
             ## Now do smoothing ##########################
             if do_smoothing:

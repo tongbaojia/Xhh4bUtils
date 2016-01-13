@@ -181,16 +181,26 @@ def QCDSystematics(datafileName="hist_data.root",
 
         #scale is max of ratio non-unity and CR stat error 
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r) ] ) )
+        print "Scale_"+r, QCDSyst_Dict["Scale_"+r], N_bkg_r, N_data_CR_r, Err_N_data_CR_r,  (N_bkg_r - N_data_CR_r)/N_bkg_r, Err_N_data_CR_r / N_data_CR_r
         #QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) )  #this one was bugged a bit, keep anyway
 
         if makePlots:
             c=R.TCanvas()
             #R.SetOwnership(c,False)
+            leg = R.TLegend(0.1,0.7,0.48,0.9)
+            leg.SetFillColor(0)
+            leg.AddEntry(ratio, "Ratio", "LP")
+            leg.AddEntry(fcen, "Ratio Fit", "L")
+            leg.AddEntry(fup, "Ratio Fit Variations", "L")
+            
             ratio.SetLineColor(R.kBlack)
+            ratio.SetXTitle("m_{JJ} [GeV]")
+            ratio.SetYTitle("Ratio Data/Prediction")
             ratio.Draw()
-            fitFunc.Draw("same")
+            fcen.Draw("same")
             fup.Draw("same")
             fdw.Draw("same")
+            leg.Draw("same")
             c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
 
 
@@ -288,13 +298,22 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     if makePlots:
         c=R.TCanvas()
         #R.SetOwnership(c,False)
+        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        leg.SetFillColor(0)
+        leg.AddEntry(top_ratio, "Ratio", "LP")
+        leg.AddEntry(fcen, "Ratio Fit", "L")
+        leg.AddEntry(frev, "Ratio Fit Slope Reversed", "L")
+        
         top_ratio.SetLineColor(R.kBlack)
+        top_ratio.SetXTitle("m_{JJ} [GeV]")
+        top_ratio.SetYTitle("Ratio Data/Prediction")
         top_ratio.Draw()
         fcen.Draw("same")
         frev.Draw("same")
-        fneg.Draw("same")
-        fup.Draw("same")
-        fdw.Draw("same")
+        #fneg.Draw("same")
+        #fup.Draw("same")
+        #fdw.Draw("same")
+        leg.Draw("same")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+compare_region+ ".root")
 
 
