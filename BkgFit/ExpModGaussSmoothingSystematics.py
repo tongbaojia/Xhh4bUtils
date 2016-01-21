@@ -7,236 +7,67 @@ import sys
 
 from GetEigenVariations import GetEigenVariations
 
+import smoothfit
+
 import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="fit.root"):
-    npar = None
-    func = None
-    fitChoice = None
-    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink]
-
-    fitName = "fit_"+outfileName[:-5]+"_%s" % (time.time())  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
-    
-    if fitFunction == "Exp":
-        npar = 2
-        fitChoice = ExpoFunc
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(0.006, 5.0)
-
-    elif fitFunction == "Dijet":
-        npar = 3
-        fitChoice = DijetFunc
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "MJ2":
-        npar = 3
-        fitChoice = MJ2Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(10, 10, 2)
-
-    elif fitFunction == "MJ3":
-        npar = 3
-        fitChoice = MJ3Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(10, 10, 2)
-
-    elif fitFunction == "MJ4":
-        npar = 3
-        fitChoice = MJ4Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "MJ5":
-        npar = 3
-        fitChoice = MJ5Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "MJ6":
-        npar = 3
-        fitChoice = MJ6Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "MJ7":
-        npar = 3
-        fitChoice = MJ7Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "MJ8":
-        npar = 3
-        fitChoice = MJ8Func
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
-
-    elif fitFunction == "GaussExp":
-        npar = 5
-        fitChoice = GaussExp
-        func = R.TF1(fitName, fitChoice, 500, fitRange[1], npar)
-        func.SetParameters(histo.Integral(), histo.GetMean() / 3000., histo.GetRMS() / 3000., 1.0, 900./3000.)
-        func.SetParLimits(0, histo.Integral()*0.1, histo.Integral()*10.0)
-        func.SetParLimits(3, 0, 1000.)
-        #func.FixParameter(4, 1000./3000.)
-
-    elif fitFunction == "ExpModGauss":
-        npar = 4
-        fitChoice = ExpModGauss
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(histo.Integral(), histo.GetMean() / 3000., histo.GetRMS() / 3000., 10.0)
-        #func.SetParLimits(0, histo.Integral()*0.1, histo.Integral()*10.0)
-        func.SetParLimits(1, 0.0001, 5.)
-        func.SetParLimits(2, 0.0001, 5.)
-        #func.SetParLimits(3, 0.001, 100.)
 
 
-    Vmode = ("Q" if not verbose else "")
-    fitResult = histo.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1])
+def smoothFuncCompare(histo, fitRange = (100, 3000), funcCompareRange=(900,3000), makePlots = False, plotExtra = True, verbose = False, outfileName="ExpModGaussSmoothFuncCompare.root"):
 
-    if fitResult.Status() != 0:
-        print "Error in smoothing fit: did not terminate properly. Exiting"
-        c=R.TCanvas()
-        #R.SetOwnership(c,False)
-        histo.Draw()
-        c.SaveAs("failed__"+outfileName)
-        sys.exit(0)
-            
-    
-    cov_TMatrix = fitResult.GetCovarianceMatrix()
-    cov = np.zeros( (npar, npar) )
-    corr = np.zeros( (npar, npar) )
-    for i in range(npar):
-        for j in range(npar):
-            cov[i,j] = cov_TMatrix[i][j]
-            corr[i,j] = cov_TMatrix[i][j] / np.sqrt(cov_TMatrix[i][i] * cov_TMatrix[j][j])
-
-    #print "covariancen matrix"
-    #print cov
-    #print corr
-    
-
-    S, U= np.linalg.eigh( cov )
-    Sd = np.diag( S )
-    sigma = np.sqrt(S)
-
-    evars = GetEigenVariations( cov )
+    fitFunction = "ExpModGauss"
 
     
-    fitFunc = histo.GetFunction(fitName)
-
-    params = array('d',[0]*npar)
-    fitFunc.GetParameters( params )
-
-    z = np.asarray( params )
-    z_variations = []
-
-    for i in range(len(evars)): 
-        zu = z + evars[i]
-        zd = z - evars[i]
-        z_variations.append( [zu, zd] )
-
-
-    namestr = outfileName.split(".root")[0]
-
-    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, fitRange[0], 5000, npar)
-    drawFunc.SetParameters( params )
-
-    if makePlots:
-        c=R.TCanvas()
-        #R.SetOwnership(c,False)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
-        leg.SetFillColor(0)
-        leg.AddEntry(histo, "Distribution", "LP")
-        leg.AddEntry(drawFunc, "Fit", "L")
-
-        histo.SetXTitle("m_{JJ} [GeV]")
-        histo.SetYTitle("Entries")
-        histo.Draw()
-        drawFunc.Draw("same")
-
-    fvar = []
-    for ivar in range(len(z_variations)):
-        fup = R.TF1("fup_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
-        fup.SetParameters( z_variations[ivar][0] )
-        fup.SetLineColor(colorlist[ivar])
-        if makePlots:
-            fup.Draw("same")
-            leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
-
-        fdw = R.TF1("fdw_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
-        fdw.SetParameters( z_variations[ivar][1] )
-        fdw.SetLineColor( colorlist[ivar] )
-        if makePlots:
-            fdw.Draw("same")
-
-        fvar.append([fup, fdw])
-    
-
-    #raw_input()
-
-    if makePlots:
-        leg.Draw("same")
-        c.SaveAs(outfileName)
-
-        fTxT = open(outfileName[:-5]+".pkl", "w")
-        fitResultDict = {
-          "params": params,
-          "cov": cov,
-        }
-        pickle.dump(fitResultDict, fTxT)
-        fTxT.close()
-
-    
-    return {"nom": drawFunc, "vars":fvar}
-
-
-
-
-def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
-
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
 
     namestr = outfileName.split(".root")[0]
 
     h_clone = histo.Clone()
     h_clone.SetDirectory(0)
+
+
+    nominal_result = smoothfit.smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = fitFunction+"_"+outfileName)
+
+    nominal_hist = smoothfit.MakeSmoothHisto(h_clone, nominal_result["nom"])
     
     results = {}
     results_hist = {}
     results_hist_ud = {}
 
     for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
-        results[theFunc] = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
-        results_hist[theFunc] = MakeSmoothHisto(h_clone, results[theFunc]["nom"])
+        results[theFunc] = smoothfit.smoothfit(h_clone, fitFunction = theFunc, fitRange = funcCompareRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
+        results_hist[theFunc] = smoothfit.MakeSmoothHisto(h_clone, results[theFunc]["nom"])
 
         results_hist_ud[theFunc] = {}
         for ivar in range(len(results[theFunc]["vars"])):
-            results_hist_ud[theFunc]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][0])
-            results_hist_ud[theFunc]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][1])
+            results_hist_ud[theFunc]["up"+str(ivar)] = smoothfit.MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][0])
+            results_hist_ud[theFunc]["dw"+str(ivar)] = smoothfit.MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][1])
 
 
 
-    histo_up = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_up")
+    histo_up = nominal_hist.Clone(histo.GetName() + "_" + namestr + "_up")
     histo_up.SetDirectory(0)
-    histo_dw = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_dw")
+    histo_dw = nominal_hist.Clone(histo.GetName() + "_" + namestr + "_dw")
     histo_dw.SetDirectory(0)
 
-    histo_up_super = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_up_super")
+    histo_up_super = nominal_hist.Clone(histo.GetName() + "_" + namestr + "_up_super")
     histo_up_super.SetDirectory(0)
-    histo_dw_super = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_dw_super")
+    histo_dw_super = nominal_hist.Clone(histo.GetName() + "_" + namestr + "_dw_super")
     histo_dw_super.SetDirectory(0)
 
     for ibin in range(1, histo.GetNbinsX()+1):
+        if histo.GetBinLowEdge(ibin) + histo.GetBinWidth(ibin) < funcCompareRange[0]:
+            continue
+        
         deltas = []
         deltas_super = []
         for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
-            deltas.append( np.abs( results_hist[fitFunction].GetBinContent(ibin) - results_hist[theFunc].GetBinContent(ibin) ) )
+            deltas.append( np.abs( nominal_hist.GetBinContent(ibin) - results_hist[theFunc].GetBinContent(ibin) ) )
 
             for ivarh in results_hist_ud[theFunc]:
-                deltas_super.append( np.abs( results_hist[fitFunction].GetBinContent(ibin) - results_hist_ud[theFunc][ivarh].GetBinContent(ibin) ) )
+                deltas_super.append( np.abs( nominal_hist.GetBinContent(ibin) - results_hist_ud[theFunc][ivarh].GetBinContent(ibin) ) )
             
 
         theDelta = np.max( deltas )
@@ -266,32 +97,31 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
         icol = 0
         ivar0 = True
         err_hist_ratio = None
+
+
+        err_hist = MakeSmoothHisto(histo, nominal_result["nom"])
+        err_hist.SetDirectory(0)
+
+        for ivar in range(len(nominal_result["vars"])):
+            err_hist_up = smoothfit.MakeSmoothHisto(histo, nominal_result["vars"][ivar][0])
+            err_hist_dw = smoothfit.MakeSmoothHisto(histo, nominal_result["vars"][ivar][1])
+
+            for ibin in range(1, err_hist.GetNbinsX()+1):
+                err_val = np.max( np.abs( [ err_hist.GetBinContent(ibin) - err_hist_up.GetBinContent(ibin), err_hist.GetBinContent(ibin) - err_hist_dw.GetBinContent(ibin)] ) )
+                err_hist.SetBinError(ibin, np.sqrt( err_hist.GetBinError(ibin)**2 + err_val**2) )
+
+        err_hist_ratio = err_hist.Clone("err_hist_ratio__"+namestr)
+        err_hist_ratio.SetDirectory(0)
+        err_hist_ratio.Divide( nominal_result["nom"] )
+
+
+        err_hist.SetFillColor(R.kBlack)
+        err_hist.SetFillStyle(3001)
+        err_hist.Draw("sameE3")
+        leg.AddEntry(err_hist, "smoothing error", "F")
+
+        
         for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
-
-            if theFunc==fitFunction:
-                err_hist = MakeSmoothHisto(histo, results[theFunc]["nom"])
-                err_hist.SetDirectory(0)
-
-                for ivar in range(len(results[theFunc]["vars"])):
-                    err_hist_up = MakeSmoothHisto(histo, results[theFunc]["vars"][ivar][0])
-                    err_hist_dw = MakeSmoothHisto(histo, results[theFunc]["vars"][ivar][1])
-
-                    for ibin in range(1, err_hist.GetNbinsX()+1):
-                        err_val = np.max( np.abs( [ err_hist.GetBinContent(ibin) - err_hist_up.GetBinContent(ibin), err_hist.GetBinContent(ibin) - err_hist_dw.GetBinContent(ibin)] ) )
-                        err_hist.SetBinError(ibin, np.sqrt( err_hist.GetBinError(ibin)**2 + err_val**2) )
-
-                err_hist_ratio = err_hist.Clone("err_hist_ratio__"+namestr)
-                err_hist_ratio.SetDirectory(0)
-                err_hist_ratio.Divide( results[theFunc]["nom"] )
-
-
-
-                err_hist.SetFillColor(R.kBlack)
-                err_hist.SetFillStyle(3001)
-                err_hist.Draw("sameE3")
-                leg.AddEntry(err_hist, "smoothing error", "F")
-
-
 
             #print results[theFunc]["nom"], results[theFunc]["nom"].Eval(1000), results[theFunc]["nom"].Eval(2000), results[theFunc]["nom"].Eval(3000)
 
@@ -331,13 +161,9 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
 
         delta_ratio_super = {}
         for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
-            ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
-            ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
-            ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
-            ## f_copy = f_ratio[theFunc].DrawCopy("same")
 
             h_ratio  = results[theFunc]["nom"].GetHistogram()
-            h_ratio.Divide( results["Exp"]["nom"] )
+            h_ratio.Divide( nominal_result["nom"] )
             h_ratio.SetDirectory(0)
 
             h_ratio.SetLineColor( colorlist[icol] )
@@ -346,7 +172,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
             if plotExtra:
                 for ivar in range(len(results[theFunc]["vars"])):
                     h_ratio_ud = results[theFunc]["vars"][ivar][0].GetHistogram()
-                    h_ratio_ud.Divide( results["Exp"]["nom"] )
+                    h_ratio_ud.Divide( nominal_result["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
@@ -355,7 +181,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
 
 
                     h_ratio_ud = results[theFunc]["vars"][ivar][1].GetHistogram()
-                    h_ratio_ud.Divide( results["Exp"]["nom"] )
+                    h_ratio_ud.Divide( nominal_result["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
@@ -574,103 +400,4 @@ def MakeSmoothHisto(hist, fitCurve):
 
 
 
-
-############################################################################################
-### functions
-############################################################################################
-def ExpoFunc(x, par):
-    return np.exp(-par[0]*x[0] + par[1])
-
-def DijetFunc(x, par):
-    z = x[0] / 13000.0
-    #return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2])
-    return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]* np.log(z)  )
-
-def MJ2Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp(par[0] + par[1]* np.log((1.0 - x[0] / 13000.0)) + par[2]*(x[0] / 13000.0)**2  )
-
-def MJ3Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]*z*np.log(z)  )
-
-def MJ4Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2]*np.log(z))
-
-def MJ5Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power((1.0 + z), par[2]*z)
-
-def MJ6Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power((1.0 + z), par[2]*np.log(z))
-
-def MJ7Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp( par[0] ) * (1.0 / z) * np.power((1.0 - z), par[1] - par[2]*np.log(z))
-
-def MJ8Func(x, par):
-    #https://cds.cern.ch/record/2026080
-    z = x[0] / 13000.0
-    return np.exp( par[0] ) * (1.0 / z**2) * np.power((1.0 - z), par[1] - par[2]*np.log(z))
-
-def GaussExp(x, par):
-    z = x[0] / 3000.
-    norm = par[0]
-    mu = par[1]
-    sigma = par[2]
-    beta = par[3]
-    crossover = par[4]
-
-    nu = beta - (crossover - mu) / (sigma**2)
-    
-    #crossover = (beta- nu) * (sigma**2) + mu
-
-    normExp = np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover )
-        
-
-    f = norm * ( np.exp( -0.5 * ( (z - mu) / sigma )**2 ) * (1.0 / (1 + np.exp(-1.0 * nu * (crossover - z)) ) ) +
-                 normExp * np.exp( -1.0 * beta * z )     * (1.0 / (1 + np.exp(-1.0 * nu * (z - crossover )) ) ) )
-    
-   
-    ##     f = norm * np.exp( -0.5 * ( (z - mu) / sigma )**2 )
-    ## else:
-    ##     f = norm * np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover ) * np.exp( -1.0 * beta * z )
-
-    return f
-
-
-def ExpModGauss(x, par):
-    z = x[0] / 3000.
-    norm = par[0]
-    mu = par[1]
-    sigma = par[2]
-    beta = par[3]
-
-    #return norm  *(beta/2.0) * (np.power( np.exp(  (2*mu + beta*np.power(sigma,2) - 2*z)), (beta/2.0)) *
-    #                            scipy.special.erfc( (mu + beta*np.power(sigma,2) - z)/(sigma * np.sqrt(2)) ) )
-
-    #return (np.exp( np.log(norm) +
-    #                np.log(beta/2.0) +
-    #                (beta/2.0)*(2*mu + beta*np.power(sigma,2) - 2*z)) *
-    #        scipy.special.erfc( (mu + beta*np.power(sigma,2) - z)/(sigma * np.sqrt(2)) ) )
-
-    return (R.TMath.Exp( R.TMath.Log(norm) + R.TMath.Log(beta/2.0) +
-                        (beta/2.0)*(2*mu + beta*R.TMath.Power(sigma,2) - 2*z)) *
-            R.TMath.Erfc( (mu + beta*R.TMath.Power(sigma,2) - z)/(sigma * np.sqrt(2)) ) )
-    
-
-############################################################################################
-
-if __name__=="__main__":
-    datafile = R.TFile("hist_data.root ","READ")
-    h = datafile.Get("GoodEvent_Pass4GoodTrackJetPass2b77PassSRMass/DiJetMass").Clone()
-    smoothfit( h, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = True, verbose = True )
     

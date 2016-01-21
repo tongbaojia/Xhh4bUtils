@@ -156,6 +156,8 @@ def QCDSystematics(datafileName="hist_data.root",
         
 
         ## fitting
+        if verbose:
+            print "QCD Ratio fit in SR=",r
         fitName = "fit_"+outfileNameBase[:-5]
         fitFunc, fitChoice, npar, params, cov = LinearFit(ratio, fitName, fitRange, verbose)
 

@@ -29,19 +29,20 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     bkg.SetYTitle("Events")
     bkg.Draw("HIST")
 
+    top.SetLineColor(R.kBlack)
+    top.SetFillColor(R.kRed)
+    top.Draw("HISTsame")
+
     bkg_err = bkg.Clone("bkg_err")
     bkg_err.SetFillColor(R.kBlack)
     bkg_err.SetFillStyle(3001)
     bkg_err.Draw("sameE2")
     
-    top.SetLineColor(R.kBlack)
-    top.SetFillColor(R.kRed)
-    top.Draw("HISTsame")
 
     top_err = top.Clone("top_err")
     top_err.SetFillColor(R.kBlack)
     top_err.SetFillStyle(3001)
-    top_err.Draw("sameE2")
+    #top_err.Draw("sameE2")
 
     leg = R.TLegend(0.1,0.7,0.48,0.9)
     leg.SetFillColor(0)
@@ -55,7 +56,8 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     return
 
 def AddErrors( qcd, top, bkg, inFile):
-    sys_List = ["smoothQ0","smoothQ1","smoothT0","smoothT1", "normY0","normY1","normY2","normY3"]
+    #sys_List = ["smoothQ0","smoothQ1","smoothT0","smoothT1", "normY0","normY1","normY2","normY3"]
+    sys_List = ["QCDShapeCR"]
 
     NotFound = inFile.Get("NotAKey")
 
@@ -123,5 +125,5 @@ def AddErrors( qcd, top, bkg, inFile):
 
 
 if __name__=="__main__":
-    makeSmoothedMJJPlots("../BkgFit/outfile_boosted_43.root", "./smooth_result_43.root")
+    makeSmoothedMJJPlots("../BkgFit/outfile_boosted_44.root", "./DijetMass_SR_QCDShapeCRSyst_44.root")
     

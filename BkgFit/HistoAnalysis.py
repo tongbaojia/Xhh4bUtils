@@ -8,6 +8,7 @@ import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 
 import SystematicsTools as SystTools
+import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 
 from HistoTools import HistLocationString as HistLocStr
 
@@ -30,12 +31,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                   nbtag_top_shape_normFit = None,
                   nbtag_top_shape_SRPred = "3",
                   rebinFinal = None,
-                  smoothing_func = "Exp",
+                  smoothing_func = "ExpModGauss",
                   inputFitResult = None,
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
-                  qcdSmoothRange = (900, 2000),
-                  topSmoothRange = (850, 1500),
+                  qcdSmoothRange = (100, 2500), #(900, 2000),
+                  topSmoothRange = (100, 2000), #(850, 1500),
                   isSystematicVariation = False,
                   verbose = False,
                   makeOutputFiles = True,
@@ -140,7 +141,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                                                     use_one_top_nuis = use_one_top_nuis,
                                                     use_scale_top_2b = use_scale_top_2b,
                                                     makePlots = True,
-                                                    verbose = verbose,
+                                                    verbose = True,
                                                     outfileNameBase="QCDSysfit.root")
         elif inputQCDSyst_Dict != None:
             QCDSyst_Dict = inputQCDSyst_Dict
@@ -210,6 +211,11 @@ def HistoAnalysis(datafileName="hist_data.root",
         qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
         qcd_int = qcd_r.Integral()
 
+        for ibin in range(1, qcd_r.GetNbinsX()+1):
+            if qcd_r.GetBinContent(ibin) < 0:
+                qcd_r.SetBinContent(ibin, 0)
+                qcd_r.SetBinError(ibin, 0)
+
 
         top_r = histos[r]["top"].Clone("top__"+r)
         if (nbtag_top_shape =="3") and (r == "44") and (MassRegionName == "SR"):   # the 3b top shape is only used during the SR prediction for 44 region
@@ -241,8 +247,13 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         ## Now do smoothing ###########################################################################################
         if do_smoothing:
-            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
+            qcd_normed = qcd_r.Clone("normed")
+            qcd_normed.SetDirectory(0)
+            qcd_normed.Scale(1.0 / qcd_normed.Integral())
+            qcd_normed_sm = smoothfit.smoothfit(qcd_normed, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_normed_smoothfit_"+r+".root")
+            
+            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_smoothfit_"+r+".root")
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = True, outfileName="top_smoothfit_"+r+".root")
     
             qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
             top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
@@ -305,9 +316,15 @@ def HistoAnalysis(datafileName="hist_data.root",
 
                 
             ## qcd smoothing function variations #################################################################
-            smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = qcdSmoothRange, makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root")
+            if smoothing_func == "ExpModGauss":
+                smoothFuncCompSyst = EMGSmoothSyst.smoothFuncCompare(qcd_r, fitRange = qcdSmoothRange, funcCompareRange=(900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root")
+            else:
+                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root")
+                
             qcd_r_func_up = smoothFuncCompSyst["up"]
             qcd_r_func_dw = smoothFuncCompSyst["dw"]
+            qcd_r_func_up_super = smoothFuncCompSyst["up_super"]
+            qcd_r_func_dw_super = smoothFuncCompSyst["dw_super"]
 
             if rebinFinal is not None:
                 qcd_r_func_up = qcd_r_func_up.Rebin(len(rebinFinal)-1, qcd_r_func_up.GetName()+"_rebinFinal", rebinFinal)
@@ -316,13 +333,21 @@ def HistoAnalysis(datafileName="hist_data.root",
             if makeOutputFiles:
                 outfileStat.WriteTObject(qcd_r_func_up, "qcd_hh_smoothFuncUp","Overwrite")
                 outfileStat.WriteTObject(qcd_r_func_dw, "qcd_hh_smoothFuncDown","Overwrite")
+                
+                outfileStat.WriteTObject(qcd_r_func_up_super, "qcd_hh_smoothFuncUp_super","Overwrite")
+                outfileStat.WriteTObject(qcd_r_func_dw_super, "qcd_hh_smoothFuncDown_super","Overwrite")
 
             qcd_r_func_up.SetDirectory(0)
             qcd_r_func_dw.SetDirectory(0)
             output_Dict[r]["qcd"]["smoothFuncUp"] = qcd_r_func_up
             output_Dict[r]["qcd"]["smoothFuncDown"] = qcd_r_func_dw
-            
 
+            qcd_r_func_up_super.SetDirectory(0)
+            qcd_r_func_dw_super.SetDirectory(0)
+            output_Dict[r]["qcd"]["smoothFuncUp_super"] = qcd_r_func_up_super
+            output_Dict[r]["qcd"]["smoothFuncDown_super"] = qcd_r_func_dw_super
+            
+            #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
             ## ttbar smoothing variations##############################################################################
             for ivar in range(len(top_sm["vars"])):
@@ -365,6 +390,10 @@ def HistoAnalysis(datafileName="hist_data.root",
 
                 qvar = qcd_r.Clone("qvar")
                 qvar.Scale( mu_qcd_var * qcd_int / qvar.Integral() )
+
+                ## for ibin in range(1, qvar.GetNbinsX()+1):
+                ##     if qvar.GetBinError(ibin) > qvar.GetBinContent(ibin):
+                ##         qvar.SetBinError(ibin, qvar.GetBinContent(ibin))
                 
                 tvar = top_r.Clone("tvar")
                 tvar.Scale( top_scale_var * top_int / tvar.Integral() )
