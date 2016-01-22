@@ -78,8 +78,10 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         fitChoice = GaussExp
         func = R.TF1(fitName, fitChoice, 500, fitRange[1], npar)
         func.SetParameters(histo.Integral(), histo.GetMean() / 3000., histo.GetRMS() / 3000., 1.0, 900./3000.)
-        func.SetParLimits(0, histo.Integral()*0.1, histo.Integral()*10.0)
-        func.SetParLimits(3, 0, 1000.)
+        #func.SetParLimits(0, histo.Integral()*0.1, histo.Integral()*10.0)
+        func.SetParLimits(1, 0.0001, 5.)
+        func.SetParLimits(2, 0.0001, 5.)
+        #func.SetParLimits(3, 0, 1000.)
         #func.FixParameter(4, 1000./3000.)
 
     elif fitFunction == "ExpModGauss":
@@ -113,9 +115,11 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
             cov[i,j] = cov_TMatrix[i][j]
             corr[i,j] = cov_TMatrix[i][j] / np.sqrt(cov_TMatrix[i][i] * cov_TMatrix[j][j])
 
-    #print "covariancen matrix"
-    #print cov
-    #print corr
+    if verbose:
+        print "covariance matrix"
+        print cov
+        print "correlation matrix"
+        print corr
     
 
     S, U= np.linalg.eigh( cov )
@@ -376,7 +380,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["3000", "2500", "2000", "1500"], makePlots = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
 
@@ -391,7 +395,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
     results_hist = {}
     results_hist_ud = {}
 
-    for maxRange in ["3000", "2500", "2000", "1500"]:
+    for maxRange in fitMaxVals:
         results[maxRange] = smoothfit(h_clone, fitFunction = fitFunction, fitRange = (fitRange[0], float(maxRange)), makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
         results_hist[maxRange] = MakeSmoothHisto(h_clone, results[maxRange]["nom"])
 
@@ -401,6 +405,10 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
             results_hist_ud[maxRange]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[maxRange]["vars"][ivar][1])
 
 
+    if verbose:
+        for maxRange in fitMaxVals:
+            print ("MaxRange=",maxRange, "Integral(",maxRange,",3000)=", results[maxRange]["nom"].Integral(float(maxRange), 3000),
+                   "nominal Integral(",maxRange,",3000)=", results["3000"]["nom"].Integral(float(maxRange), 3000) )
 
     histo_up = results_hist[strInMax].Clone(histo.GetName() + "_" + namestr + "_up")
     histo_up.SetDirectory(0)
@@ -415,7 +423,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
     for ibin in range(1, histo.GetNbinsX()+1):
         deltas = []
         deltas_super = []
-        for maxRange in ["3000", "2500", "2000", "1500"]:
+        for maxRange in fitMaxVals:
             deltas.append( np.abs( results_hist[strInMax].GetBinContent(ibin) - results_hist[maxRange].GetBinContent(ibin) ) )
 
             for ivarh in results_hist_ud[maxRange]:
@@ -449,7 +457,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
         icol = 0
         ivar0 = True
         err_hist_ratio = None
-        for maxRange in ["3000", "2500", "2000", "1500"]:
+        for maxRange in fitMaxVals:
 
             if maxRange==strInMax:
                 err_hist = MakeSmoothHisto(histo, results[maxRange]["nom"])
@@ -493,8 +501,8 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
 
             icol += 1
 
-        results_hist_ud["1500"]["up0"].SetLineColor( R.kGray+2 )
-        leg.AddEntry(results_hist_ud["1500"]["up0"], "Param Variations", "L")
+        results_hist_ud[fitMaxVals[0]]["up0"].SetLineColor( R.kGray+2 )
+        leg.AddEntry(results_hist_ud[fitMaxVals[0]]["up0"], "Param Variations", "L")
         leg.Draw()
         
 
@@ -511,7 +519,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
 
 
         delta_ratio_super = {}
-        for maxRange in ["3000", "2500", "2000", "1500"]:
+        for maxRange in fitMaxVals:
             ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
@@ -546,8 +554,10 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
             icol += 1
 
         leg.Draw()
-        for drs in delta_ratio_super:
-            print drs, delta_ratio_super[drs]
+
+        if verbose:
+            for drs in delta_ratio_super:
+                print drs, delta_ratio_super[drs]
 
         f.WriteTObject(c)
         f.WriteTObject(c2)
@@ -557,7 +567,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), m
 
 
 
-def MakeSmoothHisto(hist, fitCurve):
+def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500):
     low=R.Double(0.0)
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
@@ -568,6 +578,10 @@ def MakeSmoothHisto(hist, fitCurve):
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
     hist_smooth.Add(fitCurve, 1.0)
+
+    for ibin in range(1, hist_smooth.FindBin(lowFillVal)):
+        hist_smooth.SetBinContent(ibin, 0)
+        hist_smooth.SetBinError(ibin, 0)
 
     return hist_smooth
 
@@ -629,20 +643,21 @@ def GaussExp(x, par):
     beta = par[3]
     crossover = par[4]
 
-    nu = beta - (crossover - mu) / (sigma**2)
+    ## nu = beta - (crossover - mu) / (sigma**2)
     
-    #crossover = (beta- nu) * (sigma**2) + mu
+    ## #crossover = (beta- nu) * (sigma**2) + mu
 
-    normExp = np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover )
+    ## normExp = np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover )
         
 
-    f = norm * ( np.exp( -0.5 * ( (z - mu) / sigma )**2 ) * (1.0 / (1 + np.exp(-1.0 * nu * (crossover - z)) ) ) +
-                 normExp * np.exp( -1.0 * beta * z )     * (1.0 / (1 + np.exp(-1.0 * nu * (z - crossover )) ) ) )
+    ## f = norm * ( np.exp( -0.5 * ( (z - mu) / sigma )**2 ) * (1.0 / (1 + np.exp(-1.0 * nu * (crossover - z)) ) ) +
+    ##              normExp * np.exp( -1.0 * beta * z )     * (1.0 / (1 + np.exp(-1.0 * nu * (z - crossover )) ) ) )
     
-   
-    ##     f = norm * np.exp( -0.5 * ( (z - mu) / sigma )**2 )
-    ## else:
-    ##     f = norm * np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover ) * np.exp( -1.0 * beta * z )
+
+    if z < crossover:
+        f = norm * np.exp( -0.5 * ( (z - mu) / sigma )**2 )
+    else:
+        f = norm * np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover ) * np.exp( -1.0 * beta * z )
 
     return f
 

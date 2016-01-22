@@ -247,13 +247,13 @@ def HistoAnalysis(datafileName="hist_data.root",
 
         ## Now do smoothing ###########################################################################################
         if do_smoothing:
-            qcd_normed = qcd_r.Clone("normed")
-            qcd_normed.SetDirectory(0)
-            qcd_normed.Scale(1.0 / qcd_normed.Integral())
-            qcd_normed_sm = smoothfit.smoothfit(qcd_normed, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_normed_smoothfit_"+r+".root")
+            ## qcd_normed = qcd_r.Clone("normed")
+            ## qcd_normed.SetDirectory(0)
+            ## qcd_normed.Scale(1.0 / qcd_normed.Integral())
+            ## qcd_normed_sm = smoothfit.smoothfit(qcd_normed, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_normed_smoothfit_"+r+".root")
             
-            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = True, outfileName="top_smoothfit_"+r+".root")
+            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
     
             qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
             top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
@@ -317,9 +317,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                 
             ## qcd smoothing function variations #################################################################
             if smoothing_func == "ExpModGauss":
-                smoothFuncCompSyst = EMGSmoothSyst.smoothFuncCompare(qcd_r, fitRange = qcdSmoothRange, funcCompareRange=(900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root")
+                smoothFuncCompSyst = EMGSmoothSyst.smoothFuncCompare(qcd_r, fitFunction = smoothing_func,
+                                                                     fitRange = qcdSmoothRange, funcCompareRange=(900, qcdSmoothRange[1]),
+                                                                     makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root")
             else:
-                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root")
+                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
+                                                                 makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root")
                 
             qcd_r_func_up = smoothFuncCompSyst["up"]
             qcd_r_func_dw = smoothFuncCompSyst["dw"]
@@ -348,6 +351,8 @@ def HistoAnalysis(datafileName="hist_data.root",
             output_Dict[r]["qcd"]["smoothFuncDown_super"] = qcd_r_func_dw_super
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["3000", "2500", "2000", "1600"],
+                                             makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
             ## ttbar smoothing variations##############################################################################
             for ivar in range(len(top_sm["vars"])):
