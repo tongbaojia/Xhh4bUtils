@@ -461,11 +461,9 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
             qvar_shape_up.Multiply( QCDSyst_Dict["Shape_"+r]["fup"] )
-            qvar_shape_up.Scale( qcd_r.Integral() / qvar_shape_up.Integral() ) 
 
             qvar_shape_dw = qcd_r.Clone("qvar_QCDshape_dw")
             qvar_shape_dw.Multiply( QCDSyst_Dict["Shape_"+r]["fdw"] )
-            qvar_shape_dw.Scale( qcd_r.Integral() / qvar_shape_dw.Integral() )
 
             for ibinX in range(1, qvar_shape_up.GetNbinsX()+1):
                 if(qvar_shape_up.GetBinContent(ibinX) < 0):
@@ -475,6 +473,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                 if(qvar_shape_dw.GetBinContent(ibinX) < 0):
                     qvar_shape_dw.SetBinContent(ibinX, 0)
                     qvar_shape_dw.SetBinError(ibinX, 0)
+                    
+
+            qvar_shape_up.Scale( qcd_r.Integral() / qvar_shape_up.Integral() )
+            qvar_shape_dw.Scale( qcd_r.Integral() / qvar_shape_dw.Integral() )
+        
+
 
             ## Now do smoothing
             if do_smoothing:
@@ -551,11 +555,9 @@ def HistoAnalysis(datafileName="hist_data.root",
 
             tvar_shape_up = top_r.Clone("tvar_ttbarShapeSR_up")
             tvar_shape_up.Multiply( ttbarShapeSRSyst_Dict["f"] )
-            tvar_shape_up.Scale( top_r.Integral() / tvar_shape_up.Integral() )
 
             tvar_shape_dw = top_r.Clone("tvar_ttbarShapeSR_dw")
             tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["frev"] )
-            tvar_shape_dw.Scale( top_r.Integral() / tvar_shape_dw.Integral() )
 
 
             for ibinX in range(1, tvar_shape_up.GetNbinsX()+1):
@@ -566,6 +568,11 @@ def HistoAnalysis(datafileName="hist_data.root",
                 if(tvar_shape_dw.GetBinContent(ibinX) < 0):
                     tvar_shape_dw.SetBinContent(ibinX, 0)
                     tvar_shape_dw.SetBinError(ibinX, 0)
+                    
+
+            tvar_shape_up.Scale( top_r.Integral() / tvar_shape_up.Integral() )
+            tvar_shape_dw.Scale( top_r.Integral() / tvar_shape_dw.Integral() )
+
 
             ## Now do smoothing ##########################
             if do_smoothing:
