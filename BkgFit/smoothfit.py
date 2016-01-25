@@ -381,7 +381,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["3000", "2500", "2000", "1500"], makePlots = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["3000", "2500", "2000", "1500"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
 
@@ -492,18 +492,20 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
             leg.AddEntry(results[maxRange]["nom"], maxRange, "L")
 
 
-            for ivar in range(len(results[maxRange]["vars"])):
-                results[maxRange]["vars"][ivar][0].SetLineColor( R.kGray+2 )
-                results[maxRange]["vars"][ivar][0].Draw("same")
-                results[maxRange]["vars"][ivar][1].SetLineColor( R.kGray+2 )
-                results[maxRange]["vars"][ivar][1].Draw("same")
+            if plotExtra:
+                for ivar in range(len(results[maxRange]["vars"])):
+                    results[maxRange]["vars"][ivar][0].SetLineColor( R.kGray+2 )
+                    results[maxRange]["vars"][ivar][0].Draw("same")
+                    results[maxRange]["vars"][ivar][1].SetLineColor( R.kGray+2 )
+                    results[maxRange]["vars"][ivar][1].Draw("same")
                     
             
 
             icol += 1
 
         results_hist_ud[fitMaxVals[0]]["up0"].SetLineColor( R.kGray+2 )
-        leg.AddEntry(results_hist_ud[fitMaxVals[0]]["up0"], "Param Variations", "L")
+        if plotExtra:
+            leg.AddEntry(results_hist_ud[fitMaxVals[0]]["up0"], "Param Variations", "L")
         leg.Draw()
         
 
@@ -533,23 +535,24 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
             h_ratio.SetLineColor( colorlist[icol] )
             h_ratio.Draw("same")
 
-            for ivar in range(len(results[maxRange]["vars"])):
-                h_ratio_ud = results[maxRange]["vars"][ivar][0].GetHistogram()
-                h_ratio_ud.Divide( results[strInMax]["nom"] )
-                h_ratio_ud.SetDirectory(0)
-                h_ratio_ud.SetLineColor(R.kGray+2)
-                h_ratio_ud.Draw("same")
+            if plotExtra:
+                for ivar in range(len(results[maxRange]["vars"])):
+                    h_ratio_ud = results[maxRange]["vars"][ivar][0].GetHistogram()
+                    h_ratio_ud.Divide( results[strInMax]["nom"] )
+                    h_ratio_ud.SetDirectory(0)
+                    h_ratio_ud.SetLineColor(R.kGray+2)
+                    h_ratio_ud.Draw("same")
 
-                delta_ratio_super[maxRange+"_"+str(ivar)+"_up"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
+                    delta_ratio_super[maxRange+"_"+str(ivar)+"_up"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
 
 
-                h_ratio_ud = results[maxRange]["vars"][ivar][1].GetHistogram()
-                h_ratio_ud.Divide( results[strInMax]["nom"] )
-                h_ratio_ud.SetDirectory(0)
-                h_ratio_ud.SetLineColor(R.kGray+2)
-                h_ratio_ud.Draw("same")
+                    h_ratio_ud = results[maxRange]["vars"][ivar][1].GetHistogram()
+                    h_ratio_ud.Divide( results[strInMax]["nom"] )
+                    h_ratio_ud.SetDirectory(0)
+                    h_ratio_ud.SetLineColor(R.kGray+2)
+                    h_ratio_ud.Draw("same")
 
-                delta_ratio_super[maxRange+"_"+str(ivar)+"_dw"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
+                    delta_ratio_super[maxRange+"_"+str(ivar)+"_dw"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
             
             #print f_copy, f_ratio[theFunc], f_ratio[theFunc].Eval(1000), f_ratio[theFunc].Eval(2000), f_ratio[theFunc].Eval(3000)
             icol += 1

@@ -31,13 +31,13 @@ def HistoAnalysis(datafileName="hist_data.root",
                   nbtag_top_shape_normFit = None,
                   nbtag_top_shape_SRPred = "3",
                   rebinFinal = None,
-                  smoothing_func = "ExpModGauss",
+                  smoothing_func = "Exp",
                   inputFitResult = None,
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
                   addSmoothErrorBin = False,
-                  qcdSmoothRange = (100, 2500), #(900, 2000),
-                  topSmoothRange = (100, 2000), #(850, 1500),
+                  qcdSmoothRange = (900, 2000),# (100, 2500),
+                  topSmoothRange = (850, 2000), #(100, 2000),
                   isSystematicVariation = False,
                   verbose = False,
                   makeOutputFiles = True,
@@ -329,7 +329,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             else:
                 # smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
                 smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (qcdSmoothRange[0], qcdSmoothRange[1]),            # qi
-                                                                 makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root", plotExtra=True)  # Qi
+                                                                 makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root", plotExtra=False)  # Qi
                 
             qcd_r_func_up = smoothFuncCompSyst["up"]
             qcd_r_func_dw = smoothFuncCompSyst["dw"]
@@ -360,7 +360,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
             smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["3000", "2500", "2000", "1700"],
-                                            makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
+                                            makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
             if not addSmoothErrorBin:
@@ -571,10 +571,10 @@ def HistoAnalysis(datafileName="hist_data.root",
                                                                 outfileNameBase="TopShapeSRSysfit.root")
 
             tvar_shape_up = top_r.Clone("tvar_ttbarShapeSR_up")
-            tvar_shape_up.Multiply( ttbarShapeSRSyst_Dict["f"] )
+            tvar_shape_up.Multiply( ttbarShapeSRSyst_Dict["fup"] )
 
             tvar_shape_dw = top_r.Clone("tvar_ttbarShapeSR_dw")
-            tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["frev"] )
+            tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["fdw"] )
 
 
             for ibinX in range(1, tvar_shape_up.GetNbinsX()+1):
