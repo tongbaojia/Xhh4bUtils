@@ -235,21 +235,21 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
     top_sig    = topfile.Get(folder_sig).Clone("top_sig_"+signal_region)
     top_sig.SetDirectory(0)
-    top_sig.Rebin(2)
+    top_sig.Rebin(4)
 
 
     ## get top comparison shape
     folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
     top_comp    = topfile.Get(folder_comp).Clone("top_comp_"+compare_region)
     top_comp.SetDirectory(0)
-    top_comp.Rebin(2)
+    top_comp.Rebin(4)
 
     ## remove negative values
     ## assume same binning, else division won't work later
     for ibin in range(1, top_sig.GetNbinsX()+1):
         if top_sig.GetBinContent(ibin) < 0:
-            top_r.SetBinContent(ibin, 0)
-            top_r.SetBinError(ibin, 0)
+            top_sig.SetBinContent(ibin, 0)
+            top_sig.SetBinError(ibin, 0)
             
         if top_comp.GetBinContent(ibin) < 0:
             top_comp.SetBinContent(ibin, 0)
@@ -272,6 +272,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     lastbin_Xval = top_ratio.GetBinLowEdge(lastbin) + top_ratio.GetBinWidth(lastbin)
     #fitRange = [500, lastbin_Xval]
+    #print "ttbar fit range", fitRange
     fitRange = [500, 1600]  ## reasonable range of bins with data
 
     ## fitting
@@ -319,8 +320,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
         fcen.Draw("same")
         frev.Draw("same")
         #fneg.Draw("same")
-        #fup.Draw("same")
-        #fdw.Draw("same")
+        fup.Draw("same")
+        fdw.Draw("same")
         leg.Draw("same")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+compare_region+ ".root")
 
