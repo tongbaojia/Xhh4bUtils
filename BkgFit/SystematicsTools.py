@@ -9,6 +9,12 @@ from GetEigenVariations import GetEigenVariations
 
 from HistoTools import HistLocationString as HistLocStr
 
+# hard-coded in!!!!
+_extraNormCRSysDict = {
+    "44": 0.258,
+    "43": 0.126,
+}
+
 def QCDSystematics(datafileName="hist_data.root",
                     topfileName="hist_ttbar.root",
                     distributionName= "DiJetMass",
@@ -182,7 +188,7 @@ def QCDSystematics(datafileName="hist_data.root",
         QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
 
         #scale is max of ratio non-unity and CR stat error 
-        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r) ] ) )
+        QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r), _extraNormCRSysDict.get(r, 0.) ] ) )
         print "Scale_"+r, QCDSyst_Dict["Scale_"+r], N_bkg_r, N_data_CR_r, Err_N_data_CR_r,  (N_bkg_r - N_data_CR_r)/N_bkg_r, Err_N_data_CR_r / N_data_CR_r
         #QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) )  #this one was bugged a bit, keep anyway
 

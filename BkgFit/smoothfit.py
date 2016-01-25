@@ -168,7 +168,8 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         fup.SetLineColor(colorlist[ivar])
         if makePlots:
             fup.Draw("same")
-            leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
+            # leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
+            leg.AddEntry(fup, "Fit Variation "+str(ivar), "L")          # Qi
 
         fdw = R.TF1("fdw_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
         fdw.SetParameters( z_variations[ivar][1] )
@@ -567,17 +568,27 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
 
 
 
-def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500):
+def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False):   # qi
     low=R.Double(0.0)
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
 
+    oldIntegral = 0
+    newIntegral = 0
+
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
     for ibin in range(1, hist_smooth.GetNbinsX()+1):
         if hist_smooth.GetBinCenter(ibin) >= low:
+            oldIntegral += hist_smooth.GetBinContent(ibin)
+            newIntegral += fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))
+
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
-    hist_smooth.Add(fitCurve, 1.0)
+
+    if keepNorm:
+        hist_smooth.Add(fitCurve, oldIntegral/newIntegral)
+    else:
+        hist_smooth.Add(fitCurve, 1.0)
 
     for ibin in range(1, hist_smooth.FindBin(lowFillVal)):
         hist_smooth.SetBinContent(ibin, 0)
@@ -585,9 +596,91 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500):
 
     return hist_smooth
 
+def MakeSmoothHistoWithError(hist, smoothResult, lowFillVal=500, keepNorm=False):
+    h_nominal = MakeSmoothHisto(hist, smoothResult["nom"], lowFillVal, keepNorm)
+
+    sysList = []
+    for ivar in range(len(smoothResult["vars"])):
+        h_var_up = MakeSmoothHisto(hist, smoothResult["vars"][ivar][0], lowFillVal, keepNorm)
+        h_var_down = MakeSmoothHisto(hist, smoothResult["vars"][ivar][1], lowFillVal, keepNorm)
+
+        sysList.append( [h_var_up, h_var_down] )
+
+    h_sysMerged = AddSysErrorToHist(h_nominal, sysList)
+    return h_sysMerged["h_sysSum"]
 
 
+# add systematics on histogram as error bar
+# each item in sysList should be a set of either length 2 or 1; Length 2 means up/down; Length 1 means we symmetrize the variation
+# two histogram will be returned: one is with systematic variation only, and another one is the sum of systematic variation and whatever original error on nominal histogram
+# the error on normalization will also be returned
+def AddSysErrorToHist(h, sysList):
+    h_original = h.Clone()
+    h_original.SetDirectory(0)
 
+    nbins = h.GetNbinsX()
+
+    h_sysOnly = h.Clone(h.GetName()+"_sysOnly")
+    h_sysOnly.SetDirectory(0)
+    for ibin in range(0, h_sysOnly.GetNbinsX()+2):
+        h_sysOnly.SetBinError(ibin, 0.)
+
+    h_sysSum = h.Clone(h.GetName()+"_sysSum")
+    h_sysSum.SetDirectory(0)
+
+    normSysError = 0.
+
+    for oneSys in sysList:
+        # distribution
+        for ibin in range(0, h.GetNbinsX()+2):
+            if len(oneSys) == 2:
+                sysError1 = abs(oneSys[0].GetBinContent(ibin) - h.GetBinContent(ibin))
+                sysError2 = abs(oneSys[1].GetBinContent(ibin) - h.GetBinContent(ibin))
+            elif len(oneSys) == 1:
+                sysError1 = abs(oneSys[0].GetBinContent(ibin) - h.GetBinContent(ibin))
+                sysError2 = sysError1
+            else:
+                print "Invalid systematic item:",oneSys,"Zero systematic will be set!"
+                sysError1 = 0.
+                sysError2 = 0.
+
+            sysError = max(sysError1, sysError2)
+
+            h_sysOnly.SetBinError(ibin, R.TMath.Sqrt((h_sysOnly.GetBinError(ibin))**2 + sysError**2) )
+            h_sysSum.SetBinError(ibin, R.TMath.Sqrt((h_sysSum.GetBinError(ibin))**2 + sysError**2) )
+
+        # normalization
+        if len(oneSys) == 2:
+            normSysError1 = abs(oneSys[0].Integral(0, nbins+1) - h.Integral(0, nbins+1))
+            normSysError2 = abs(oneSys[1].Integral(0, nbins+1) - h.Integral(0, nbins+1))
+        elif len(oneSys) == 1:
+            normSysError1 = abs(oneSys[0].Integral(0, nbins+1) - h.Integral(0, nbins+1))
+            normSysError2 = normSysError1
+
+        # debug
+        # print h_original.Integral(0, nbins+1), oneSys[0].Integral(0, nbins+1) - h.Integral(0, nbins+1)
+
+        currentSysError = max(normSysError1, normSysError2)
+        normSysError = R.TMath.Sqrt(normSysError**2 + currentSysError**2)
+
+    normStatsError = R.Double(0.)
+    norm = h_original.IntegralAndError(0, nbins+1, normStatsError)
+
+    normSumError = R.TMath.Sqrt( normStatsError**2 + normSysError**2 )
+
+    outputDict = {
+                   'h_sysOnly': h_sysOnly,
+                   'h_sysSum':  h_sysSum,
+                   'h_original': h_original,
+
+                   'normSysError': normSysError,
+                   "normStatsError": normStatsError,
+                   "normSumError": normSumError,
+
+                   "norm": norm,
+                 }
+
+    return outputDict
 
 ############################################################################################
 ### functions

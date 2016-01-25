@@ -35,6 +35,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                   inputFitResult = None,
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
+                  addSmoothErrorBin = False,
                   qcdSmoothRange = (100, 2500), #(900, 2000),
                   topSmoothRange = (100, 2000), #(850, 1500),
                   isSystematicVariation = False,
@@ -78,7 +79,7 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
     ##for outputing
-    do_smoothing  = (doSmoothing if distributionName=="DiJetMass" else False)
+    do_smoothing  = (doSmoothing if (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime") else False)   # qi
 
     ##################################################################
 
@@ -128,7 +129,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##### Get QCD Shape Systematics from CR  ##############################
     if MassRegionName == "SR":
         # should only affect SR
-        if inputQCDSyst_Dict == None and distributionName=="DiJetMass":
+        if inputQCDSyst_Dict == None and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):  # qi
             QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
                                                     topfileName=topfileName,
                                                     distributionName= dist_name,
@@ -255,8 +256,12 @@ def HistoAnalysis(datafileName="hist_data.root",
             qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
             top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
     
-            qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
-            top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
+            if addSmoothErrorBin:
+                qcd_final = smoothfit.MakeSmoothHistoWithError(qcd_r, qcd_sm)
+                top_final = smoothfit.MakeSmoothHistoWithError(top_r, top_sm)
+            else:
+                qcd_final = smoothfit.MakeSmoothHisto(qcd_r, qcd_sm["nom"])
+                top_final = smoothfit.MakeSmoothHisto(top_r, top_sm["nom"])
 
             qcd_final.SetNameTitle("qcd_hh_"+r+"__clone",   "qcd_hh_"+r+"__clone")
             top_final.SetNameTitle("ttbar_hh_"+r+"__clone", "ttbar_hh_"+r+"__clone")
@@ -289,29 +294,30 @@ def HistoAnalysis(datafileName="hist_data.root",
         if do_smoothing:
             
             ## qcd smoothing variations#################################################################
-            for ivar in range(len(qcd_sm["vars"])):
-                qup = qcd_sm["vars"][ivar][0]
-                qdw = qcd_sm["vars"][ivar][1]
+            if not addSmoothErrorBin:
+                for ivar in range(len(qcd_sm["vars"])):
+                    qup = qcd_sm["vars"][ivar][0]
+                    qdw = qcd_sm["vars"][ivar][1]
 
-                qcd_r_qup = smoothfit.MakeSmoothHisto(qcd_r, qup)
-                qcd_r_qdw = smoothfit.MakeSmoothHisto(qcd_r, qdw)
+                    qcd_r_qup = smoothfit.MakeSmoothHisto(qcd_r, qup)
+                    qcd_r_qdw = smoothfit.MakeSmoothHisto(qcd_r, qdw)
 
-                qcd_r_qup.SetNameTitle("qcd_hh_"+r+"_smoothQ"+str(ivar)+"Up__clone", "qcd_hh_"+r+"_smoothQ"+str(ivar)+"Up__clone")
-                qcd_r_qdw.SetNameTitle("qcd_hh_"+r+"_smoothQ"+str(ivar)+"Down__clone", "qcd_hh_"+r+"_smoothQ"+str(ivar)+"Down__clone")
+                    qcd_r_qup.SetNameTitle("qcd_hh_"+r+"_smoothQ"+str(ivar)+"Up__clone", "qcd_hh_"+r+"_smoothQ"+str(ivar)+"Up__clone")
+                    qcd_r_qdw.SetNameTitle("qcd_hh_"+r+"_smoothQ"+str(ivar)+"Down__clone", "qcd_hh_"+r+"_smoothQ"+str(ivar)+"Down__clone")
 
 
-                if rebinFinal is not None:
-                    qcd_r_qup = qcd_r_qup.Rebin(len(rebinFinal)-1, qcd_r_qup.GetName()+"_rebinFinal", rebinFinal)
-                    qcd_r_qdw = qcd_r_qdw.Rebin(len(rebinFinal)-1, qcd_r_qdw.GetName()+"_rebinFinal", rebinFinal)
+                    if rebinFinal is not None:
+                        qcd_r_qup = qcd_r_qup.Rebin(len(rebinFinal)-1, qcd_r_qup.GetName()+"_rebinFinal", rebinFinal)
+                        qcd_r_qdw = qcd_r_qdw.Rebin(len(rebinFinal)-1, qcd_r_qdw.GetName()+"_rebinFinal", rebinFinal)
 
-                if makeOutputFiles:
-                    outfileStat.WriteTObject(qcd_r_qup, "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
-                    outfileStat.WriteTObject(qcd_r_qdw, "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
+                    if makeOutputFiles:
+                        outfileStat.WriteTObject(qcd_r_qup, "qcd_hh_smoothQ"+str(ivar)+"Up","Overwrite")
+                        outfileStat.WriteTObject(qcd_r_qdw, "qcd_hh_smoothQ"+str(ivar)+"Down","Overwrite")
 
-                qcd_r_qup.SetDirectory(0)
-                qcd_r_qdw.SetDirectory(0)
-                output_Dict[r]["qcd"]["smoothQ"+str(ivar)+"Up"] = qcd_r_qup
-                output_Dict[r]["qcd"]["smoothQ"+str(ivar)+"Down"] = qcd_r_qdw
+                    qcd_r_qup.SetDirectory(0)
+                    qcd_r_qdw.SetDirectory(0)
+                    output_Dict[r]["qcd"]["smoothQ"+str(ivar)+"Up"] = qcd_r_qup
+                    output_Dict[r]["qcd"]["smoothQ"+str(ivar)+"Down"] = qcd_r_qdw
 
 
                 
@@ -319,10 +325,11 @@ def HistoAnalysis(datafileName="hist_data.root",
             if smoothing_func == "ExpModGauss":
                 smoothFuncCompSyst = EMGSmoothSyst.smoothFuncCompare(qcd_r, fitFunction = smoothing_func,
                                                                      fitRange = qcdSmoothRange, funcCompareRange=(900, qcdSmoothRange[1]),
-                                                                     makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root")
+                                                                     makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root", plotExtra=True)  # Qi
             else:
-                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
-                                                                 makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root")
+                # smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
+                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (qcdSmoothRange[0], qcdSmoothRange[1]),            # qi
+                                                                 makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root", plotExtra=True)  # Qi
                 
             qcd_r_func_up = smoothFuncCompSyst["up"]
             qcd_r_func_dw = smoothFuncCompSyst["dw"]
@@ -351,32 +358,34 @@ def HistoAnalysis(datafileName="hist_data.root",
             output_Dict[r]["qcd"]["smoothFuncDown_super"] = qcd_r_func_dw_super
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["3000", "2500", "2000", "1600"],
-                                             makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
+            
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["3000", "2500", "2000", "1700"],
+                                            makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
-            for ivar in range(len(top_sm["vars"])):
-                tup = top_sm["vars"][ivar][0]
-                tdw = top_sm["vars"][ivar][1]
+            if not addSmoothErrorBin:
+                for ivar in range(len(top_sm["vars"])):
+                    tup = top_sm["vars"][ivar][0]
+                    tdw = top_sm["vars"][ivar][1]
 
-                top_r_tup = smoothfit.MakeSmoothHisto(top_r, tup)
-                top_r_tdw = smoothfit.MakeSmoothHisto(top_r, tdw)
+                    top_r_tup = smoothfit.MakeSmoothHisto(top_r, tup)
+                    top_r_tdw = smoothfit.MakeSmoothHisto(top_r, tdw)
 
-                top_r_tup.SetNameTitle("ttbar_hh_"+r+"_smoothT"+str(ivar)+"Up__clone",   "ttbar_hh_"+r+"_smoothT"+str(ivar)+"Up__clone")
-                top_r_tdw.SetNameTitle("ttbar_hh_"+r+"_smoothT"+str(ivar)+"Down__clone", "ttbar_hh_"+r+"_smoothT"+str(ivar)+"Down__clone")
+                    top_r_tup.SetNameTitle("ttbar_hh_"+r+"_smoothT"+str(ivar)+"Up__clone",   "ttbar_hh_"+r+"_smoothT"+str(ivar)+"Up__clone")
+                    top_r_tdw.SetNameTitle("ttbar_hh_"+r+"_smoothT"+str(ivar)+"Down__clone", "ttbar_hh_"+r+"_smoothT"+str(ivar)+"Down__clone")
 
-                if rebinFinal is not None:
-                    top_r_tup = top_r_tup.Rebin(len(rebinFinal)-1, top_r_tup.GetName()+"_rebinFinal", rebinFinal)
-                    top_r_tdw = top_r_tdw.Rebin(len(rebinFinal)-1, top_r_tdw.GetName()+"_rebinFinal", rebinFinal)
+                    if rebinFinal is not None:
+                        top_r_tup = top_r_tup.Rebin(len(rebinFinal)-1, top_r_tup.GetName()+"_rebinFinal", rebinFinal)
+                        top_r_tdw = top_r_tdw.Rebin(len(rebinFinal)-1, top_r_tdw.GetName()+"_rebinFinal", rebinFinal)
 
-                if makeOutputFiles:
-                    outfileStat.WriteTObject(top_r_tup, "ttbar_hh_smoothT"+str(ivar)+"Up","Overwrite")
-                    outfileStat.WriteTObject(top_r_tdw, "ttbar_hh_smoothT"+str(ivar)+"Down","Overwrite")
+                    if makeOutputFiles:
+                        outfileStat.WriteTObject(top_r_tup, "ttbar_hh_smoothT"+str(ivar)+"Up","Overwrite")
+                        outfileStat.WriteTObject(top_r_tdw, "ttbar_hh_smoothT"+str(ivar)+"Down","Overwrite")
 
-                top_r_tup.SetDirectory(0)
-                top_r_tdw.SetDirectory(0)
-                output_Dict[r]["ttbar"]["smoothT"+str(ivar)+"Up"] = top_r_tup
-                output_Dict[r]["ttbar"]["smoothT"+str(ivar)+"Down"] = top_r_tdw
+                    top_r_tup.SetDirectory(0)
+                    top_r_tdw.SetDirectory(0)
+                    output_Dict[r]["ttbar"]["smoothT"+str(ivar)+"Up"] = top_r_tup
+                    output_Dict[r]["ttbar"]["smoothT"+str(ivar)+"Down"] = top_r_tdw
 
             
 
@@ -417,8 +426,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                     tvar_sm = smoothfit.smoothfit(tvar, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
                                                   outfileName="top_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
 
-                    qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
-                    tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
+                    if addSmoothErrorBin:
+                        qvar_final = smoothfit.MakeSmoothHistoWithError(qvar, qvar_sm)
+                        tvar_final = smoothfit.MakeSmoothHistoWithError(tvar, tvar_sm)
+                    else:
+                        qvar_final = smoothfit.MakeSmoothHisto(qvar, qvar_sm["nom"])
+                        tvar_final = smoothfit.MakeSmoothHisto(tvar, tvar_sm["nom"])
 
                     qvar_final.SetNameTitle("qcd_hh_"+r+"_normY"+str(ivar)+UpDw+"__clone",   "qcd_hh_"+r+"_normY"+str(ivar)+UpDw+"__clone")
                     tvar_final.SetNameTitle("ttbar_hh_"+r+"_normY"+str(ivar)+UpDw+"__clone", "ttbar_hh_"+r+"_normY"+str(ivar)+UpDw+"__clone")
@@ -457,7 +470,7 @@ def HistoAnalysis(datafileName="hist_data.root",
         ########################################################################################################
         ####### QCD Shape and Norm estimated from CR            ################################################
         ########################################################################################################
-        if QCDSyst_Dict!=None and distributionName=="DiJetMass":
+        if QCDSyst_Dict!=None and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):  # qi
             
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
             qvar_shape_up.Multiply( QCDSyst_Dict["Shape_"+r]["fup"] )
@@ -488,8 +501,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                 qvar_shape_dw_sm = smoothfit.smoothfit(qvar_shape_dw, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = False, verbose = verbose,
                                                         outfileName="qcd_smoothfit_"+r+"_QCDShapeDown.root")
 
-                qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"])
-                qvar_shape_dw_final = smoothfit.MakeSmoothHisto(qvar_shape_dw, qvar_shape_dw_sm["nom"])
+                if addSmoothErrorBin:
+                    qvar_shape_up_final = smoothfit.MakeSmoothHistoWithError(qvar_shape_up, qvar_shape_up_sm)
+                    qvar_shape_dw_final = smoothfit.MakeSmoothHistoWithError(qvar_shape_dw, qvar_shape_dw_sm)
+                else:
+                    qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"])
+                    qvar_shape_dw_final = smoothfit.MakeSmoothHisto(qvar_shape_dw, qvar_shape_dw_sm["nom"])
 
                 qvar_shape_up_final.SetNameTitle("qcd_hh_"+r+"_QCDShapeCRUp__clone",     "qcd_hh_"+r+"_QCDShapeCRUp__clone")
                 qvar_shape_dw_final.SetNameTitle("qcd_hh_"+r+"_QCDShapeCRDown__clone",   "qcd_hh_"+r+"_QCDShapeCRDown__clone")
@@ -543,7 +560,7 @@ def HistoAnalysis(datafileName="hist_data.root",
         #####################################################################################################################
         ### top shape systematics in 4b region, if using 3b shape ###########################################################
         #####################################################################################################################
-        if r == "44" and nbtag_top_shape_SRPred == "3"  and distributionName=="DiJetMass":
+        if r == "44" and nbtag_top_shape_SRPred == "3" and MassRegionName == "SR"  and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):   # qi
             ttbarShapeSRSyst_Dict = SystTools.ttbarShapeSysSR(topfileName,
                                                                 distributionName,
                                                                 signal_region = "43",
@@ -582,8 +599,12 @@ def HistoAnalysis(datafileName="hist_data.root",
                 tvar_shape_dw_sm = smoothfit.smoothfit(tvar_shape_dw, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
                                                         outfileName="top_smoothfit_"+r+"_ttbarShapeSReDown.root")
 
-                tvar_shape_up_final = smoothfit.MakeSmoothHisto(tvar_shape_up, tvar_shape_up_sm["nom"])
-                tvar_shape_dw_final = smoothfit.MakeSmoothHisto(tvar_shape_dw, tvar_shape_dw_sm["nom"])
+                if addSmoothErrorBin:
+                    tvar_shape_up_final = smoothfit.MakeSmoothHistoWithError(tvar_shape_up, tvar_shape_up_sm)
+                    tvar_shape_dw_final = smoothfit.MakeSmoothHistoWithError(tvar_shape_dw, tvar_shape_dw_sm)
+                else:
+                    tvar_shape_up_final = smoothfit.MakeSmoothHisto(tvar_shape_up, tvar_shape_up_sm["nom"])
+                    tvar_shape_dw_final = smoothfit.MakeSmoothHisto(tvar_shape_dw, tvar_shape_dw_sm["nom"])
 
                 tvar_shape_up_final.SetNameTitle("ttbar_hh_"+r+"_ttbarShapeSRUp__clone",     "ttbar_hh_"+r+"_ttbarShapeSRUp__clone")
                 tvar_shape_dw_final.SetNameTitle("ttbar_hh_"+r+"_ttbarShapeSRDown__clone",   "ttbar_hh_"+r+"_ttbarShapeSRDown__clone")

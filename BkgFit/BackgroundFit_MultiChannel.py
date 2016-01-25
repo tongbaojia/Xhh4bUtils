@@ -94,6 +94,7 @@ def BackgroundFit(datafileName="hist_data.root",
     # collect all histograms
     for r in ["44","43","42","33","32"]:
         folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+        # print folder_r
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
 
