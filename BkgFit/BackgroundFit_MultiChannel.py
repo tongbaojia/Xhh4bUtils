@@ -149,6 +149,23 @@ def BackgroundFit(datafileName="hist_data.root",
     results["pnom"]  = pnom
     results["pvars"] = pvars
 
+    # store the input histograms for fitting
+    h_store_2b_data = histos[r[0]+"2"]["data"].Clone()
+    h_store_2b_data.SetDirectory(0)
+    results["inputhist_2b_data"] = h_store_2b_data
+
+    h_store_2b_ttbar = histos[r[0]+"2"]["top"].Clone()
+    h_store_2b_ttbar.SetDirectory(0)
+    results["inputhist_2b_ttbar"] = h_store_2b_ttbar
+
+    h_store_4b_data = histos[r[0]+"4"]["data"].Clone()
+    h_store_4b_data.SetDirectory(0)
+    results["inputhist_4b_data"] = h_store_4b_data
+
+    h_store_4b_ttbar = histos[r[0]+"4"]["top"].Clone()
+    h_store_4b_ttbar.SetDirectory(0)
+    results["inputhist_4b_ttbar"] = h_store_4b_ttbar
+
     #print pnom
     #print pvars
 
