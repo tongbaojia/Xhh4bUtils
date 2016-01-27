@@ -8,6 +8,8 @@ from copy import deepcopy
 from GetEigenVariations import GetEigenVariations
 
 from HistoTools import HistLocationString as HistLocStr
+from HistoTools import CheckAndGet
+
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
@@ -17,6 +19,7 @@ _extraNormCRSysDict = {
 
 def QCDSystematics(datafileName="hist_data.root",
                     topfileName="hist_ttbar.root",
+                    zjetfileName="hist_Zjets.root",
                     distributionName= "DiJetMass",
                     n_trkjet  = ["4","4"],
                     n_btag    = ["4","3"],
@@ -61,6 +64,7 @@ def QCDSystematics(datafileName="hist_data.root",
     ##### Get Signal Region Histograms ################################
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
+    zjetfile  = R.TFile(zjetfileName,"READ")
 
 
     histos = {}
@@ -75,13 +79,16 @@ def QCDSystematics(datafileName="hist_data.root",
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)
 
+        zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
+        zjet_r.SetDirectory(0)
+
         for ibin in range(1, top_r.GetNbinsX()+1):
             if top_r.GetBinContent(ibin) < 0:
                 top_r.SetBinContent(ibin, 0)
                 top_r.SetBinError(ibin, 0)
                 
 
-        histos[r]     = {"data": data_r,            "top": top_r}
+        histos[r]     = {"data": data_r,  "top": top_r,  "zjet":zjet_r}
 
     datafile.Close()
     topfile.Close()
@@ -102,13 +109,20 @@ def QCDSystematics(datafileName="hist_data.root",
         if scaleTop2b:
             top_2b.Scale( (topscale_vals[0] if use_one_top_nuis else topscale_vals[ir]) )
 
+        zjet_2b = histos[r_2b]["zjet"].Clone("zjet_2b__"+r)
+
+
         qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
         qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
+        qcd_r.Add( zjet_2b, -1)
         qcd_int = qcd_r.Integral()
 
 
         top_r = histos[r]["top"].Clone("top__"+r)
         top_int = top_r.Integral()
+
+        zjet_r = histos[r]["zjet"].Clone("zjet__"+r)
+
 
 
         mu_qcd = mu_qcd_vals[ir]
@@ -122,6 +136,8 @@ def QCDSystematics(datafileName="hist_data.root",
         #now do ratio
         bkg_r = qcd_r.Clone("bkg__"+r)
         bkg_r.Add( top_r )
+        bkg_r.Add( zjet_r )
+
 
         N_bkg_r = bkg_r.Integral()
 

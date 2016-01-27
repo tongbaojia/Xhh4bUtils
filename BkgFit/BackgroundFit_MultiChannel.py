@@ -8,12 +8,15 @@ from copy import deepcopy
 from GetEigenVariations import GetEigenVariations
 
 from HistoTools import HistLocationString as HistLocStr
+from HistoTools import CheckAndGet
 
 
 regions = {}
 h_qcd = {}
 h_top = {}
 h_top_2b = {}
+h_zjet = {}
+h_zjet_2b = {}
 h_data = {}
 
 useOneTopNuis = None
@@ -23,6 +26,7 @@ dist_name = None
 
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
+                  zjetfileName="hist_Zjets.root",
                   distributionName= "LeadCaloJetM",
                   n_trkjet  = ["4","4"],
                   n_btag    = ["4","3"],
@@ -74,6 +78,8 @@ def BackgroundFit(datafileName="hist_data.root",
 
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
+    zjetfile  = R.TFile(zjetfileName,"READ")
+
     #########################################################
 
     
@@ -97,6 +103,9 @@ def BackgroundFit(datafileName="hist_data.root",
         # print folder_r
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
+        zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
+ 
+
 
         for ibin in range(1, top_r.GetNbinsX()+1):
             if top_r.GetBinContent(ibin) < 0:
@@ -104,7 +113,7 @@ def BackgroundFit(datafileName="hist_data.root",
                 top_r.SetBinError(ibin, 0)
     
         
-        histo_r  = {"data": data_r, "top": top_r}
+        histo_r  = {"data": data_r, "top": top_r, "zjet": zjet_r}
 
         histos[r] = histo_r
 
@@ -121,20 +130,28 @@ def BackgroundFit(datafileName="hist_data.root",
         else:
             ht = histos[r]["top"].Clone("h_top_"+r)
 
+        hz = histos[r]["zjet"].Clone("h_zjet_"+r)
+        hz2 = histos[r[0]+"2"]["zjet"].Clone("h_zjet_"+r)
+
 
        
         hq.Add( ht2, -1.0)
+        hq.Add( hz2, -1.0)
         
         h_data[r] = hd 
         h_qcd[r] = hq 
         h_top[r] = ht 
         h_top_2b[r] = ht2
+        h_zjet[r] = hz 
+        h_zjet_2b[r] = hz2
 
         if NRebin > 1:
             h_data[r].Rebin(NRebin)
             h_qcd[r].Rebin(NRebin)
             h_top[r].Rebin(NRebin)
             h_top_2b[r].Rebin(NRebin)
+            h_zjet[r].Rebin(NRebin)
+            h_zjet_2b[r].Rebin(NRebin)
         
        
     
@@ -183,6 +200,7 @@ def BackgroundFit(datafileName="hist_data.root",
 
     datafile.Close()
     topfile.Close()
+    zjetfile.Close()
     
     return results
 
@@ -250,6 +268,12 @@ def MakePlot(region, muqcd, topscale):
     h_top2.SetLineWidth(1)
     #h_top2.Rebin(nrebin)
 
+    h_zjet2 = h_zjet[region].Clone("zjet2_"+region)
+    h_zjet2.SetFillColor(R.kOrange)
+    h_zjet2.SetLineColor(R.kBlack)
+    h_zjet2.SetLineWidth(1)
+    #h_top2.Rebin(nrebin)
+
     h_qcd2 = h_qcd[region].Clone("qcd2_"+region)
     h_qcd2.Scale( muqcd )
     h_qcd2.SetLineColor(R.kRed)
@@ -259,6 +283,7 @@ def MakePlot(region, muqcd, topscale):
 
     h_pred = h_top2.Clone("pred_"+region)
     h_pred.Add( h_qcd2, 1.0)
+    h_pred.Add( h_zjet2, 1.0)
     h_pred.SetLineColor(R.kBlue)
     h_pred.SetFillColor(0)
     h_pred.SetLineWidth(1)
@@ -266,6 +291,7 @@ def MakePlot(region, muqcd, topscale):
 
     h_data2.Draw("E")
     h_top2.Draw("sameHIST")
+    h_zjet2.Draw("sameHIST")
     h_qcd2.Draw("sameHIST")
     h_pred.Draw("sameHIST")
     h_data2.Draw("sameE")
@@ -273,6 +299,7 @@ def MakePlot(region, muqcd, topscale):
     leg = R.TLegend(0.1,0.7,0.48,0.9)
     leg.AddEntry(h_data2,"Data ("+region+"), 3.2 fb^{-1}","EL")
     leg.AddEntry(h_top2,"ttbar MC","F")
+    leg.AddEntry(h_zjet2,"Z+jets MC","F")
     leg.AddEntry(h_qcd2,"QCD model","L")
     leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
     leg.SetFillColor(0)
@@ -286,6 +313,7 @@ def MakePlot(region, muqcd, topscale):
     print "Npred = ", h_pred.Integral()
     print "Nqcd = ", h_qcd2.Integral()
     print "Ntop = ", h_top2.Integral()
+    print "Nzjet = ", h_zjet2.Integral()
     print " "
 
     c.SaveAs("fitNorm_"+region+".root")
@@ -400,12 +428,13 @@ def NegLogL(npar, gin, f, par, ifag):
         data_r = h_data[r]
         qcd_r = h_qcd[r]
         top_r = h_top[r]
+        zjet_r = h_zjet[r]
         top2b_r = h_top_2b[r]
 
         Nbins = data_r.GetNbinsX()
 
         for ibin in range(1,Nbins+1):
-            expected_i = muqcd * qcd_r.GetBinContent(ibin) + topscale * top_r.GetBinContent(ibin)
+            expected_i = muqcd * qcd_r.GetBinContent(ibin) + topscale * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
             
             if scaleTop2b:
                 expected_i = expected_i + (muqcd * (1.0 - topscale) * top2b_r.GetBinContent(ibin))

@@ -11,6 +11,7 @@ import SystematicsTools as SystTools
 import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 
 from HistoTools import HistLocationString as HistLocStr
+from HistoTools import CheckAndGet
 
 
 func1 = None
@@ -21,6 +22,7 @@ func2 = None
 # nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
 def HistoAnalysis(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
+                  zjetfileName="hist_Zjets.root",
                   distributionName= "DiJetMass",
                   n_trkjet  = ["4","4"],
                   n_btag    = ["4","3"],
@@ -93,8 +95,8 @@ def HistoAnalysis(datafileName="hist_data.root",
     Nbkg_dict    = {  }
     Nbkg_SysList = {  }
     for ir in regions:
-        Nbkg_dict[ir]    = { "qcd":0,  "top":0,  "bkg":0 }
-        Nbkg_SysList[ir] = { "qcd":[], "top":[], "bkg":[] }
+        Nbkg_dict[ir]    = { "qcd":0,  "top":0,  "zjet":0,  "bkg":0 }
+        Nbkg_SysList[ir] = { "qcd":[], "top":[], "zjet":[], "bkg":[] }
 
 
     vartxt = ''
@@ -106,6 +108,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     if inputFitResult == None:
         bkgFitResults = BkgFit. BackgroundFit(datafileName=datafileName,
                                           topfileName=topfileName,
+                                          zjetfileName=zjetfileName,
                                           distributionName= "LeadCaloJetM",
                                           n_trkjet  = n_trkjet,
                                           n_btag    = n_btag,
@@ -132,6 +135,7 @@ def HistoAnalysis(datafileName="hist_data.root",
         if inputQCDSyst_Dict == None and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):  # qi
             QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
                                                     topfileName=topfileName,
+                                                    zjetfileName=zjetfileName,
                                                     distributionName= dist_name,
                                                     n_trkjet  = n_trkjet,
                                                     n_btag    = n_btag,
@@ -162,6 +166,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##### Get Signal Region Histograms ################################
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
+    zjetfile  = R.TFile(zjetfileName,"READ")
 
 
     histos = {}
@@ -177,13 +182,16 @@ def HistoAnalysis(datafileName="hist_data.root",
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)
 
+        zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
+        zjet_r.SetDirectory(0)
+
         for ibin in range(1, top_r.GetNbinsX()+1):
             if top_r.GetBinContent(ibin) < 0:
                 top_r.SetBinContent(ibin, 0)
                 top_r.SetBinError(ibin, 0)
                 
 
-        histos[r]     = {"data": data_r,            "top": top_r}
+        histos[r]     = {"data": data_r,  "top": top_r,  "zjet":zjet_r}
 
     datafile.Close()
     topfile.Close()
@@ -196,7 +204,7 @@ def HistoAnalysis(datafileName="hist_data.root",
     for ir in range(len(regions)):
         r = regions[ir]
 
-        output_Dict[r] = {"qcd":{}, "ttbar":{}}
+        output_Dict[r] = {"qcd":{}, "ttbar":{}, "zjet":{}}
         
         if makeOutputFiles:
             outfileStat = R.TFile("outfile_boosted_"+r+".root","RECREATE")
@@ -208,8 +216,11 @@ def HistoAnalysis(datafileName="hist_data.root",
         if scaleTop2b:
             top_2b.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
 
+        zjet_2b = histos[r_2b]["zjet"].Clone("zjet_2b__"+r)
+
         qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
         qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
+        qcd_r.Add( zjet_2b, -1)
         qcd_int = qcd_r.Integral()
 
         for ibin in range(1, qcd_r.GetNbinsX()+1):
@@ -224,6 +235,8 @@ def HistoAnalysis(datafileName="hist_data.root",
             top_r = histos[r_3b]["top"].Clone("top__"+r)
             top_r.Scale( temp_scaler )
         top_int = top_r.Integral()
+
+        zjet_r = histos[r]["zjet"].Clone("zjet__"+r)
 
 
         mu_qcd = bkgFitResults["muqcd"][ir]
@@ -270,19 +283,27 @@ def HistoAnalysis(datafileName="hist_data.root",
             qcd_final = qcd_r.Clone("qcd_hh_"+r+"__clone")
             top_final = top_r.Clone("ttbar_hh_"+r+"__clone")
 
+        zjet_final = zjet_r.Clone("zjet_hh_"+r+"__clone")
+
 
         if rebinFinal is not None:
             qcd_final = qcd_final.Rebin(len(rebinFinal)-1, qcd_final.GetName()+"_rebinFinal", rebinFinal)
             top_final = top_final.Rebin(len(rebinFinal)-1, top_final.GetName()+"_rebinFinal", rebinFinal)
+            zjet_final = zjet_final.Rebin(len(rebinFinal)-1, zjet_final.GetName()+"_rebinFinal", rebinFinal)
+
 
         if makeOutputFiles:
             outfileStat.WriteTObject(qcd_final, "qcd_hh","Overwrite")
             outfileStat.WriteTObject(top_final, "ttbar_hh","Overwrite")
+            outfileStat.WriteTObject(zjet_final, "zjet_hh","Overwrite")
+
 
         qcd_final.SetDirectory(0)
         top_final.SetDirectory(0)
+        zjet_final.SetDirectory(0)
         output_Dict[r]["qcd"]["nom"] = qcd_final
         output_Dict[r]["ttbar"]["nom"] = top_final
+        output_Dict[r]["zjet"]["nom"] = zjet_final
 
         # for systematics, don't need anything after this in loop
         if isSystematicVariation:

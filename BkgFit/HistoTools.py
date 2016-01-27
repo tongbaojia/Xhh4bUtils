@@ -28,6 +28,25 @@ def CollectHistos(datafile, topfile, distName="DiJetMass", massRegion="SB", btag
 
     return histos
 
+
+def CheckAndGet(infile, folder, alternative_histo):
+    if infile == None:
+        out_hist = alternative_histo.Clone(folder+"__clone")
+        out_hist.Reset("ICE")
+        out_hist.SetDirectory(0)
+        return out_hist
+    
+    NotFound = infile.Get("NotAKey")
+    if infile.Get(folder) == NotFound:
+        out_hist = alternative_histo.Clone(folder+"__clone")
+        out_hist.Reset("ICE")
+    else:
+        out_hist = infile.Get(folder)
+
+    out_hist.SetDirectory(0)
+    return out_hist
+        
+        
     
 def GetSignalHistos(infileName="hist_RSG_c10.root",
                     distName="ChannelNumber_DiJetMass",
