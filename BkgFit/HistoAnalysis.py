@@ -253,8 +253,8 @@ def HistoAnalysis(datafileName="hist_data.root",
             ## qcd_normed.Scale(1.0 / qcd_normed.Integral())
             ## qcd_normed_sm = smoothfit.smoothfit(qcd_normed, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_normed_smoothfit_"+r+".root")
             
-            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = verbose, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = verbose, outfileName="top_smoothfit_"+r+".root")
+            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = False, outfileName="qcd_smoothfit_"+r+".root")
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = False, outfileName="top_smoothfit_"+r+".root")
     
             if addSmoothErrorBin:
                 qcd_final = smoothfit.MakeSmoothHistoWithError(qcd_r, qcd_sm)
@@ -344,8 +344,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                 outfileStat.WriteTObject(qcd_r_func_up, "qcd_hh_smoothFuncUp","Overwrite")
                 outfileStat.WriteTObject(qcd_r_func_dw, "qcd_hh_smoothFuncDown","Overwrite")
                 
-                outfileStat.WriteTObject(qcd_r_func_up_super, "qcd_hh_smoothFuncUp_super","Overwrite")
-                outfileStat.WriteTObject(qcd_r_func_dw_super, "qcd_hh_smoothFuncDown_super","Overwrite")
+                outfileStat.WriteTObject(qcd_r_func_up_super, "qcd_hh_smoothFuncSuperUp","Overwrite")
+                outfileStat.WriteTObject(qcd_r_func_dw_super, "qcd_hh_smoothFuncSuperDown","Overwrite")
 
             qcd_r_func_up.SetDirectory(0)
             qcd_r_func_dw.SetDirectory(0)
