@@ -12,6 +12,7 @@ import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
+from HistoTools import BlindData2bSR
 
 
 func1 = None
@@ -107,18 +108,18 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##### Do Background Fits ############################################
     if inputFitResult == None:
         bkgFitResults = BkgFit. BackgroundFit(datafileName=datafileName,
-                                          topfileName=topfileName,
-                                          zjetfileName=zjetfileName,
-                                          distributionName= "LeadCaloJetM",
-                                          n_trkjet  = n_trkjet,
-                                          n_btag    = n_btag,
-                                          btag_WP     = btag_WP,
-                                          NRebin = NRebin,
-                                          use_one_top_nuis = use_one_top_nuis,
-                                          use_scale_top_2b = use_scale_top_2b,
-                                          nbtag_top_shape = nbtag_top_shape_normFit,
-                                          makePlots = True,
-                                          verbose = verbose )
+                                              topfileName=topfileName,
+                                              zjetfileName=zjetfileName,
+                                              distributionName= "LeadCaloJetM",
+                                              n_trkjet  = n_trkjet,
+                                              n_btag    = n_btag,
+                                              btag_WP     = btag_WP,
+                                              NRebin = NRebin,
+                                              use_one_top_nuis = use_one_top_nuis,
+                                              use_scale_top_2b = use_scale_top_2b,
+                                              nbtag_top_shape = nbtag_top_shape_normFit,
+                                              makePlots = True,
+                                              verbose = verbose )
 
     else:
         bkgFitResults = inputFitResult
@@ -146,7 +147,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                                                     use_one_top_nuis = use_one_top_nuis,
                                                     use_scale_top_2b = use_scale_top_2b,
                                                     makePlots = True,
-                                                    verbose = False, # True, # hack
+                                                    verbose = False,
                                                     outfileNameBase="QCDSysfit.root")
         elif inputQCDSyst_Dict != None:
             QCDSyst_Dict = inputQCDSyst_Dict
@@ -178,6 +179,8 @@ def HistoAnalysis(datafileName="hist_data.root",
         
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
+        if (r == "42") and (MassRegionName == "SR"):
+            data_r = BlindData2bSR(data_r)
         
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)
@@ -346,7 +349,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             if smoothing_func == "ExpModGauss":
                 smoothFuncCompSyst = EMGSmoothSyst.smoothFuncCompare(qcd_r, fitFunction = smoothing_func,
                                                                      fitRange = qcdSmoothRange, funcCompareRange=(900, qcdSmoothRange[1]),
-                                                                     makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root", plotExtra=True)  # Qi
+                                                                     makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root", plotExtra=False)  # Qi
             else:
                 # smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
                 smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (qcdSmoothRange[0], qcdSmoothRange[1]),            # qi

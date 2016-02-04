@@ -27,6 +27,12 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     bkg.GetXaxis().SetRangeUser(500, 3500)
     bkg.SetXTitle("m_{JJ} [GeV]")
     bkg.SetYTitle("Events")
+
+    bkg.GetXaxis().SetTitleOffset(1.2)
+    bkg.GetXaxis().SetTitleSize(0.04)
+    bkg.GetYaxis().SetTitleOffset(1.2)
+    bkg.GetYaxis().SetTitleSize(0.04)
+
     bkg.Draw("HIST")
 
     top.SetLineColor(R.kBlack)
@@ -56,7 +62,8 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     return
 
 def AddErrors( qcd, top, bkg, inFile):
-    sys_List = ["smoothQ0","smoothQ1","smoothT0","smoothT1", "normY0","normY1","normY2","normY3","smoothFuncSuper","QCDShapeCR","QCDNormCR","ttbarShapeSR"]
+    # sys_List = ["smoothQ0","smoothQ1","smoothT0","smoothT1", "normY0","normY1","normY2","normY3","smoothFuncSuper","QCDShapeCR","QCDNormCR","ttbarShapeSR"]
+    sys_List = ["smoothQ0","smoothQ1","smoothT0","smoothT1"]
     #sys_List = ["QCDShapeCR"]
 
     NotFound = inFile.Get("NotAKey")
@@ -125,5 +132,6 @@ def AddErrors( qcd, top, bkg, inFile):
 
 
 if __name__=="__main__":
-    makeSmoothedMJJPlots("../BkgFit/outfile_boosted_43.root", "./DijetMass_SR_QCDShapeCRSyst_43.root")
+    makeSmoothedMJJPlots("../outfile_boosted_44.root", "./DijetMass_SR_QCDShapeCRSyst_44.root")
+    makeSmoothedMJJPlots("../outfile_boosted_43.root", "./DijetMass_SR_QCDShapeCRSyst_43.root")
     

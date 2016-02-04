@@ -20,6 +20,8 @@ def CollectHistos(datafile, topfile, distName="DiJetMass", massRegion="SB", btag
         
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
+        if (r == "42") and (massRegion == "SR"):
+          data_r = BlindData2bSR(data_r)
         
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)     
@@ -28,6 +30,18 @@ def CollectHistos(datafile, topfile, distName="DiJetMass", massRegion="SB", btag
 
     return histos
 
+def BlindData2bSR(h_data, blindThreshold=2000.):
+  h_data_blinded = h_data.Clone()
+  h_data_blinded.SetDirectory(0)
+
+  blind_bin = h_data_blinded.GetXaxis().FindFixBin(blindThreshold)
+  nbins = h_data_blinded.GetNbinsX()
+
+  for ibin in range(blind_bin, nbins+2):
+    h_data_blinded.SetBinContent(ibin, 0)
+    h_data_blinded.SetBinError(ibin, 0)
+
+  return h_data_blinded
 
 def CheckAndGet(infile, folder, alternative_histo):
     if infile == None:

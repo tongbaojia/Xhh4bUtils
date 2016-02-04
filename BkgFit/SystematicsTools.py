@@ -9,12 +9,13 @@ from GetEigenVariations import GetEigenVariations
 
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
+from HistoTools import BlindData2bSR
 
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-    "44": 0.258,
-    "43": 0.126,
+    # "44": 0.258,
+    # "43": 0.126,
 }
 
 def QCDSystematics(datafileName="hist_data.root",
@@ -32,7 +33,7 @@ def QCDSystematics(datafileName="hist_data.root",
                     makePlots = False,
                     verbose = False,
                     outfileNameBase="QCDSysfit.root"):
-
+    
     ##### Parse Inputs ############################################
     dist_name   = distributionName
     
@@ -244,7 +245,6 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
                     verbose = False,
                     outfileNameBase="TopShapeSRSysfit.root"):
     
-
     topfile  = R.TFile(topfileName,"READ")
     
     ## get top SR shape
