@@ -381,13 +381,15 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["3000", "2500", "2000", "1500"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
 
     namestr = outfileName.split(".root")[0]
 
     strInMax = str(fitRange[1])
+
+    strNom = str(fitRange[0]) + "_" + str(fitRange[1])
 
     h_clone = histo.Clone()
     h_clone.SetDirectory(0)
@@ -396,14 +398,21 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
     results_hist = {}
     results_hist_ud = {}
 
+    fitPairs={}
     for maxRange in fitMaxVals:
-        results[maxRange] = smoothfit(h_clone, fitFunction = fitFunction, fitRange = (fitRange[0], float(maxRange)), makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
-        results_hist[maxRange] = MakeSmoothHisto(h_clone, results[maxRange]["nom"])
+        fitPairs[str(fitRange[0])+"_"+maxRange] =   (fitRange[0], float(maxRange)) 
+    for minRange in fitMinVals:
+        fitPairs[minRange + "_"+str(fitRange[1])] = (float(minRange),fitRange[1])
+    
 
-        results_hist_ud[maxRange] = {}
-        for ivar in range(len(results[maxRange]["vars"])):
-            results_hist_ud[maxRange]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[maxRange]["vars"][ivar][0])
-            results_hist_ud[maxRange]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[maxRange]["vars"][ivar][1])
+    for fpair in fitPairs:
+        results[fpair] = smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitPairs[fpair], makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
+        results_hist[fpair] = MakeSmoothHisto(h_clone, results[fpair]["nom"])
+
+        results_hist_ud[fpair] = {}
+        for ivar in range(len(results[fpair]["vars"])):
+            results_hist_ud[fpair]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[fpair]["vars"][ivar][0])
+            results_hist_ud[fpair]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[fpair]["vars"][ivar][1])
 
 
     if verbose:
@@ -411,24 +420,24 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
             print ("MaxRange=",maxRange, "Integral(",maxRange,",3000)=", results[maxRange]["nom"].Integral(float(maxRange), 3000),
                    "nominal Integral(",maxRange,",3000)=", results["3000"]["nom"].Integral(float(maxRange), 3000) )
 
-    histo_up = results_hist[strInMax].Clone(histo.GetName() + "_" + namestr + "_up")
+    histo_up = results_hist[strNom].Clone(histo.GetName() + "_" + namestr + "_up")
     histo_up.SetDirectory(0)
-    histo_dw = results_hist[strInMax].Clone(histo.GetName() + "_" + namestr + "_dw")
+    histo_dw = results_hist[strNom].Clone(histo.GetName() + "_" + namestr + "_dw")
     histo_dw.SetDirectory(0)
 
-    histo_up_super = results_hist[strInMax].Clone(histo.GetName() + "_" + namestr + "_up_super")
+    histo_up_super = results_hist[strNom].Clone(histo.GetName() + "_" + namestr + "_up_super")
     histo_up_super.SetDirectory(0)
-    histo_dw_super = results_hist[strInMax].Clone(histo.GetName() + "_" + namestr + "_dw_super")
+    histo_dw_super = results_hist[strNom].Clone(histo.GetName() + "_" + namestr + "_dw_super")
     histo_dw_super.SetDirectory(0)
 
     for ibin in range(1, histo.GetNbinsX()+1):
         deltas = []
         deltas_super = []
-        for maxRange in fitMaxVals:
-            deltas.append( np.abs( results_hist[strInMax].GetBinContent(ibin) - results_hist[maxRange].GetBinContent(ibin) ) )
+        for fpair in fitPairs:
+            deltas.append( np.abs( results_hist[strNom].GetBinContent(ibin) - results_hist[fpair].GetBinContent(ibin) ) )
 
-            for ivarh in results_hist_ud[maxRange]:
-                deltas_super.append( np.abs( results_hist[strInMax].GetBinContent(ibin) - results_hist_ud[maxRange][ivarh].GetBinContent(ibin) ) )
+            for ivarh in results_hist_ud[fpair]:
+                deltas_super.append( np.abs( results_hist[strNom].GetBinContent(ibin) - results_hist_ud[fpair][ivarh].GetBinContent(ibin) ) )
             
 
         theDelta = np.max( deltas )
@@ -458,15 +467,15 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
         icol = 0
         ivar0 = True
         err_hist_ratio = None
-        for maxRange in fitMaxVals:
+        for fpair in fitPairs:
 
-            if maxRange==strInMax:
-                err_hist = MakeSmoothHisto(histo, results[maxRange]["nom"])
+            if fpair==strNom:
+                err_hist = MakeSmoothHisto(histo, results[fpair]["nom"])
                 err_hist.SetDirectory(0)
 
-                for ivar in range(len(results[maxRange]["vars"])):
-                    err_hist_up = MakeSmoothHisto(histo, results[maxRange]["vars"][ivar][0])
-                    err_hist_dw = MakeSmoothHisto(histo, results[maxRange]["vars"][ivar][1])
+                for ivar in range(len(results[fpair]["vars"])):
+                    err_hist_up = MakeSmoothHisto(histo, results[fpair]["vars"][ivar][0])
+                    err_hist_dw = MakeSmoothHisto(histo, results[fpair]["vars"][ivar][1])
 
                     for ibin in range(1, err_hist.GetNbinsX()+1):
                         err_val = np.max( np.abs( [ err_hist.GetBinContent(ibin) - err_hist_up.GetBinContent(ibin), err_hist.GetBinContent(ibin) - err_hist_dw.GetBinContent(ibin)] ) )
@@ -474,7 +483,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
 
                 err_hist_ratio = err_hist.Clone("err_hist_ratio__"+namestr)
                 err_hist_ratio.SetDirectory(0)
-                err_hist_ratio.Divide( results[maxRange]["nom"] )
+                err_hist_ratio.Divide( results[fpair]["nom"] )
 
 
 
@@ -487,25 +496,25 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
 
             #print results[theFunc]["nom"], results[theFunc]["nom"].Eval(1000), results[theFunc]["nom"].Eval(2000), results[theFunc]["nom"].Eval(3000)
 
-            results[maxRange]["nom"].SetLineColor( colorlist[icol] )
-            results[maxRange]["nom"].Draw("same")
-            leg.AddEntry(results[maxRange]["nom"], maxRange, "L")
+            results[fpair]["nom"].SetLineColor( colorlist[icol] )
+            results[fpair]["nom"].Draw("same")
+            leg.AddEntry(results[fpair]["nom"], fpair, "L")
 
 
             if plotExtra:
-                for ivar in range(len(results[maxRange]["vars"])):
-                    results[maxRange]["vars"][ivar][0].SetLineColor( R.kGray+2 )
-                    results[maxRange]["vars"][ivar][0].Draw("same")
-                    results[maxRange]["vars"][ivar][1].SetLineColor( R.kGray+2 )
-                    results[maxRange]["vars"][ivar][1].Draw("same")
+                for ivar in range(len(results[fpair]["vars"])):
+                    results[fpair]["vars"][ivar][0].SetLineColor( R.kGray+2 )
+                    results[fpair]["vars"][ivar][0].Draw("same")
+                    results[fpair]["vars"][ivar][1].SetLineColor( R.kGray+2 )
+                    results[fpair]["vars"][ivar][1].Draw("same")
                     
             
 
             icol += 1
 
-        results_hist_ud[fitMaxVals[0]]["up0"].SetLineColor( R.kGray+2 )
+        results_hist_ud[strNom]["up0"].SetLineColor( R.kGray+2 )
         if plotExtra:
-            leg.AddEntry(results_hist_ud[fitMaxVals[0]]["up0"], "Param Variations", "L")
+            leg.AddEntry(results_hist_ud[strNom]["up0"], "Param Variations", "L")
         leg.Draw()
         
 
@@ -522,37 +531,37 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
 
 
         delta_ratio_super = {}
-        for maxRange in fitMaxVals:
+        for fpair in fitPairs:
             ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
             ## f_copy = f_ratio[theFunc].DrawCopy("same")
 
-            h_ratio  = results[maxRange]["nom"].GetHistogram()
-            h_ratio.Divide( results[strInMax]["nom"] )
+            h_ratio  = results[fpair]["nom"].GetHistogram()
+            h_ratio.Divide( results[strNom]["nom"] )
             h_ratio.SetDirectory(0)
 
             h_ratio.SetLineColor( colorlist[icol] )
             h_ratio.Draw("same")
 
             if plotExtra:
-                for ivar in range(len(results[maxRange]["vars"])):
-                    h_ratio_ud = results[maxRange]["vars"][ivar][0].GetHistogram()
-                    h_ratio_ud.Divide( results[strInMax]["nom"] )
+                for ivar in range(len(results[fpair]["vars"])):
+                    h_ratio_ud = results[fpair]["vars"][ivar][0].GetHistogram()
+                    h_ratio_ud.Divide( results[strNom]["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
 
-                    delta_ratio_super[maxRange+"_"+str(ivar)+"_up"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
+                    delta_ratio_super[fpair+"_"+str(ivar)+"_up"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
 
 
-                    h_ratio_ud = results[maxRange]["vars"][ivar][1].GetHistogram()
-                    h_ratio_ud.Divide( results[strInMax]["nom"] )
+                    h_ratio_ud = results[fpair]["vars"][ivar][1].GetHistogram()
+                    h_ratio_ud.Divide( results[strNom]["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
 
-                    delta_ratio_super[maxRange+"_"+str(ivar)+"_dw"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
+                    delta_ratio_super[fpair+"_"+str(ivar)+"_dw"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
             
             #print f_copy, f_ratio[theFunc], f_ratio[theFunc].Eval(1000), f_ratio[theFunc].Eval(2000), f_ratio[theFunc].Eval(3000)
             icol += 1
