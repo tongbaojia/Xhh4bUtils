@@ -9,7 +9,6 @@ from GetEigenVariations import GetEigenVariations
 
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
-from HistoTools import BlindData2bSR
 
 
 # hard-coded in!!!!

@@ -12,7 +12,7 @@ import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
-from HistoTools import BlindData2bSR
+# from HistoTools import BlindData2bSR ---> no longer needed, since they are blinded during histogram production
 
 
 func1 = None
@@ -44,7 +44,8 @@ def HistoAnalysis(datafileName="hist_data.root",
                   isSystematicVariation = False,
                   verbose = False,
                   makeOutputFiles = True,
-                  MassRegionName = "SR"):
+                  MassRegionName = "SR"
+                  ):
 
     global func1
     global func2
@@ -137,7 +138,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
                                                     topfileName=topfileName,
                                                     zjetfileName=zjetfileName,
-                                                    distributionName= dist_name,
+                                                    distributionName= "DiJetMass",   # this has been decided to fix on DiJetMass
                                                     n_trkjet  = n_trkjet,
                                                     n_btag    = n_btag,
                                                     btag_WP     = btag_WP,
@@ -179,8 +180,8 @@ def HistoAnalysis(datafileName="hist_data.root",
         
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
-        if (r == "42") and (MassRegionName == "SR"):
-            data_r = BlindData2bSR(data_r)
+        # if (r == "42") and (MassRegionName == "SR") and blindData2bSR and ( (distributionName == "DiJetMass") or (distributionName == "DiJetMassPrime") ):
+        #     data_r = BlindData2bSR(data_r)
         
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         top_r.SetDirectory(0)
@@ -383,7 +384,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["3000", "2500", "2000", "1700"],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1500", "1750", "2000"],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
