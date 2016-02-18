@@ -23,7 +23,8 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         npar = 2
         fitChoice = ExpoFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(0.006, 5.0)
+        # func.SetParameters(0.006, 5.0)
+        func.SetParameters(0.005, 5.0)
 
     elif fitFunction == "Dijet":
         npar = 3
@@ -207,6 +208,8 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     namestr = outfileName.split(".root")[0]
 
     h_clone = histo.Clone()
+    h_clone.GetXaxis().SetRangeUser(500, 3000)
+    h_clone.GetYaxis().SetRangeUser(1e-3, 1e2)
     h_clone.SetDirectory(0)
     
     results = {}
@@ -327,7 +330,12 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
         #R.SetOwnership(c,False)
         print "err_hist_ratio",err_hist_ratio
         err_hist_ratio.SetFillColor(R.kBlack)
-        err_hist_ratio.SetFillStyle(3001)
+        err_hist_ratio.SetFillStyle(3004)
+        err_hist_ratio.SetMarkerSize(0)
+        err_hist_ratio.GetXaxis().SetRangeUser(1000, 3000)
+        err_hist_ratio.GetYaxis().SetRangeUser(0, 2)
+        err_hist_ratio.GetXaxis().SetLabelSize(0.04)
+        err_hist_ratio.GetYaxis().SetLabelSize(0.04)
         err_hist_ratio.Draw("E2")
 
         icol = 0
@@ -373,6 +381,8 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
         leg.Draw()
         #for drs in delta_ratio_super:
         #    print drs, delta_ratio_super[drs]
+
+        c.SetLogy()
 
         f.WriteTObject(c)
         f.WriteTObject(c2)
@@ -457,12 +467,20 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
         
         c=R.TCanvas("c1","c1")
         #R.SetOwnership(c,False)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
-        leg.SetFillColor(0)
+        leg1 = R.TLegend(0.5,0.5,0.8,0.8)
+        leg1.SetFillColor(0)
+
+        leg2 = R.TLegend(0.1,0.65,0.45,0.9)
+        leg2.SetFillColor(0)
     
         h_clone.SetLineColor(R.kBlack)
+        h_clone.GetXaxis().SetRangeUser(500,3000)
+        h_clone.GetYaxis().SetRangeUser(1e-3,1e2)
+        h_clone.SetTitle("")
         h_clone.Draw()
-        leg.AddEntry(histo, "Histogram", "L")
+        
+        leg1.AddEntry(histo, "Histogram", "P")
+        leg2.AddEntry(histo, "Histogram", "L")
 
         icol = 0
         ivar0 = True
@@ -490,15 +508,18 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
                 err_hist.SetFillColor(R.kBlack)
                 err_hist.SetFillStyle(3001)
                 err_hist.Draw("sameE3")
-                leg.AddEntry(err_hist, "smoothing error", "F")
 
+                leg1.AddEntry(err_hist, "smoothing error", "F")
+                leg2.AddEntry(err_hist, "smoothing error", "F")
 
 
             #print results[theFunc]["nom"], results[theFunc]["nom"].Eval(1000), results[theFunc]["nom"].Eval(2000), results[theFunc]["nom"].Eval(3000)
 
             results[fpair]["nom"].SetLineColor( colorlist[icol] )
             results[fpair]["nom"].Draw("same")
-            leg.AddEntry(results[fpair]["nom"], fpair, "L")
+
+            leg1.AddEntry(results[fpair]["nom"], fpair, "L")
+            leg2.AddEntry(results[fpair]["nom"], fpair, "L")
 
 
             if plotExtra:
@@ -508,27 +529,31 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
                     results[fpair]["vars"][ivar][1].SetLineColor( R.kGray+2 )
                     results[fpair]["vars"][ivar][1].Draw("same")
                     
-            
-
             icol += 1
 
         results_hist_ud[strNom]["up0"].SetLineColor( R.kGray+2 )
         if plotExtra:
-            leg.AddEntry(results_hist_ud[strNom]["up0"], "Param Variations", "L")
-        leg.Draw()
+            leg1.AddEntry(results_hist_ud[strNom]["up0"], "Param Variations", "L")
+            leg2.AddEntry(results_hist_ud[strNom]["up0"], "Param Variations", "L")
         
-
+        leg1.Draw()
+        c.SetLogy(1)
 
         c2=R.TCanvas("c2","c2")
         #R.SetOwnership(c,False)
         print "err_hist_ratio",err_hist_ratio
         err_hist_ratio.SetFillColor(R.kBlack)
-        err_hist_ratio.SetFillStyle(3001)
+        err_hist_ratio.SetFillStyle(3004)
+        err_hist_ratio.SetMarkerSize(0)
+        err_hist_ratio.GetXaxis().SetRangeUser(1000, 3000)
+        err_hist_ratio.GetYaxis().SetRangeUser(0, 2)
+        err_hist_ratio.GetXaxis().SetLabelSize(0.04)
+        err_hist_ratio.GetYaxis().SetLabelSize(0.04)
+        err_hist_ratio.SetTitle("")
         err_hist_ratio.Draw("E2")
 
         icol = 0
         f_ratio = {}
-
 
         delta_ratio_super = {}
         for fpair in fitPairs:
@@ -542,7 +567,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
             h_ratio.SetDirectory(0)
 
             h_ratio.SetLineColor( colorlist[icol] )
-            h_ratio.Draw("same")
+            h_ratio.Draw("hist same")
 
             if plotExtra:
                 for ivar in range(len(results[fpair]["vars"])):
@@ -566,7 +591,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), f
             #print f_copy, f_ratio[theFunc], f_ratio[theFunc].Eval(1000), f_ratio[theFunc].Eval(2000), f_ratio[theFunc].Eval(3000)
             icol += 1
 
-        leg.Draw()
+        leg2.Draw()
 
         if verbose:
             for drs in delta_ratio_super:

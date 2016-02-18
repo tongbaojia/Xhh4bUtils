@@ -372,6 +372,25 @@ def HistoAnalysis(datafileName="hist_data.root",
                 outfileStat.WriteTObject(qcd_r_func_up_super, "qcd_hh_smoothFuncSuperUp","Overwrite")
                 outfileStat.WriteTObject(qcd_r_func_dw_super, "qcd_hh_smoothFuncSuperDown","Overwrite")
 
+            # treat negative bin
+            for ibin in range(1, qcd_r_func_up.GetNbinsX()+1):
+                if qcd_r_func_up.GetBinContent(ibin) < 0:
+                    qcd_r_func_up.SetBinContent(ibin, 0)
+                    qcd_r_func_up.SetBinError(ibin, 0)
+
+                if qcd_r_func_dw.GetBinContent(ibin) < 0:
+                    qcd_r_func_dw.SetBinContent(ibin, 0)
+                    qcd_r_func_dw.SetBinError(ibin, 0)
+
+                if qcd_r_func_up_super.GetBinContent(ibin) < 0:
+                    qcd_r_func_up_super.SetBinContent(ibin, 0)
+                    qcd_r_func_up_super.SetBinError(ibin, 0)
+
+                if qcd_r_func_dw_super.GetBinContent(ibin) < 0:
+                    qcd_r_func_dw_super.SetBinContent(ibin, 0)
+                    qcd_r_func_dw_super.SetBinError(ibin, 0)
+
+
             qcd_r_func_up.SetDirectory(0)
             qcd_r_func_dw.SetDirectory(0)
             output_Dict[r]["qcd"]["smoothFuncUp"] = qcd_r_func_up
@@ -384,7 +403,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1500", "1750", "2000"],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1500", "1750", "2000"], fitMinVals=[str(qcdSmoothRange[0])],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################

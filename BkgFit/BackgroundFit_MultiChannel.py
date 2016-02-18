@@ -407,7 +407,8 @@ def ClearMinuit( minuit ):
             continue
 
         topscaleName = "topscale"+("_"+regions[i] if not useOneTopNuis else '')
-        minuit.DefineParameter(i+len(regions), topscaleName, 1.3, 0.01, 0.00001, 5)
+        # minuit.DefineParameter(i+len(regions), topscaleName, 1.3, 0.01, 0.00001, 5)
+        minuit.DefineParameter(i+len(regions), topscaleName, 1.0, 0.01, 0.00001, 5)
         
     return
     
