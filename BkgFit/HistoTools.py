@@ -1,13 +1,18 @@
 
-def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP="77", massRegion="SB", whichFunc="SLAC"):
+def HistLocationString(distName="DiJetMass", ntrackjet = "i", nbtag="4", btagWP="77", massRegion="SB", whichFunc="SLAC"):
     output = None
     
     if whichFunc == "SLAC":
         output = "GoodEvent_Pass" + ntrackjet + "GoodTrackJetPass" + nbtag + "b" + btagWP +"Pass"+massRegion+"Mass/"+distName
         #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
     elif whichFunc == "XhhBoosted":
-        word_dict = {"4": "Four", "3" : "Three", "2" : "Two"}
-        output = word_dict[nbtag] + "Tag_" + massRegion + "/" + distName
+        word_dict = {"4": "FourTag", "3" : "ThreeTag", "2" : \
+        "TwoTag", "2s" : "TwoTag_split", "1": "OneTag", "0": "NoTag"}
+        bkg_dict = {"2" : "2Trk_split", "3" : "3Trk", "4" : "4Trk"}
+        if (ntrackjet == "i"):
+          output = word_dict[nbtag] + "_" + massRegion + "/" + distName
+        else:
+          output = word_dict[nbtag] + "_" + bkg_dict[ntrackjet] + "_" + massRegion + "/" + distName
 
     return output
 

@@ -1,5 +1,4 @@
 import ROOT as R
-
 import numpy as np
 
 def makeSmoothedMJJPlots( infileName, outfileName ):
@@ -14,10 +13,8 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     #stack qcd on top of top
     bkg.Add(top)
     
-
     AddErrors( qcd, top, bkg, f)
     
-
     #make canvas
     c=R.TCanvas()
     R.gPad.SetLogy()
@@ -57,7 +54,6 @@ def makeSmoothedMJJPlots( infileName, outfileName ):
     leg.Draw()
 
     c.SaveAs(outfileName)
-
 
     return
 
@@ -108,7 +104,6 @@ def AddErrors( qcd, top, bkg, inFile):
             top_errors[ibin] = np.sqrt(top_errors[ibin]**2 + top_sys_e**2)
 
             
-
             e_up =  (qcd_sys_up.GetBinContent(ibin) - qcd_v) + (top_sys_up.GetBinContent(ibin) - top_v)
             e_dw =  (qcd_sys_dw.GetBinContent(ibin) - qcd_v) + (top_sys_dw.GetBinContent(ibin) - top_v)
 
@@ -124,11 +119,6 @@ def AddErrors( qcd, top, bkg, inFile):
 
 
     return qcd, top, bkg
-
-
-
-
-
 
 
 if __name__=="__main__":

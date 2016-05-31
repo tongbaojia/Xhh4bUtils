@@ -36,6 +36,8 @@ def BackgroundFit(datafileName="hist_data.root",
                   use_scale_top_2b = False,
                   nbtag_top_shape = None,
                   makePlots = True,
+                  whichFunc = "SLAC",
+                  output = "",
                   verbose = True ):
     
     global h_qcd
@@ -46,6 +48,7 @@ def BackgroundFit(datafileName="hist_data.root",
     global scaleTop2b
     global regions
     global dist_name
+    global Output
     
 
     ################### Parse  #########################
@@ -78,7 +81,8 @@ def BackgroundFit(datafileName="hist_data.root",
 
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
-    zjetfile  = R.TFile(zjetfileName,"READ")
+    zjetfile = R.TFile(zjetfileName,"READ")
+    Output   = output
 
     #########################################################
 
@@ -99,7 +103,7 @@ def BackgroundFit(datafileName="hist_data.root",
 
     # collect all histograms
     for r in ["44","43","42","33","32"]:
-        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, ("SB" if whichFunc == "SLAC" else "Sideband"), whichFunc)  #folder( r[0], r[1], btag_WP)
         # print folder_r
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
@@ -316,7 +320,7 @@ def MakePlot(region, muqcd, topscale):
     print "Nzjet = ", h_zjet2.Integral()
     print " "
 
-    c.SaveAs("fitNorm_"+region+".root")
+    c.SaveAs(Output + "fitNorm_"+region+".root")
 
     return c
 
