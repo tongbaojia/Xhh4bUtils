@@ -7,6 +7,8 @@ from copy import deepcopy
 from GetEigenVariations import GetEigenVariations
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
+R.gROOT.LoadMacro("AtlasStyle.C") 
+R.SetAtlasStyle()
 
 
 regions = {}
@@ -19,12 +21,11 @@ h_data = {}#data modeling
 
 useOneTopNuis = None
 scaleTop_model = None
-dist_name = None
 
 def BackgroundFit(datafileName        ="hist_data.root",
                   topfileName         ="hist_ttbar.root",
                   zjetfileName        ="hist_Zjets.root",
-                  distributionName    = "LeadCaloJetM",
+                  distributionName    = ["LeadCaloJetM"],
                   n_trkjet            = ["4", "3", "2", "1"],
                   n_btag              = ["4", "3", "2s", "2", "1"], #["4", "3", "2s", "2", "1"],
                   btag_WP             = "77", #not useful for Xhh Framework
@@ -42,13 +43,12 @@ def BackgroundFit(datafileName        ="hist_data.root",
     global h_top
     global h_top_model
     global h_data
+    global dist_name
     global useOneTopNuis
     global scaleTop_model
     global regions
-    global dist_name
     global Output
     ################### Parse  #########################
-    dist_name   = distributionName
     # num_trkjet  = np.asarray(n_trkjet)
     # if num_trkjet.shape==():
     #     num_trkjet = np.asarray([n_trkjet])
@@ -63,6 +63,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
     #setup top shape constrains
     useOneTopNuis = use_one_top_nuis
     scaleTop_model = use_scale_top_model
+    dist_name = distributionName
     ########################################################
     #setup regions to fit
     regions = [ "i" + n_btag[i] for i in range(len(n_btag)) ]
@@ -93,63 +94,67 @@ def BackgroundFit(datafileName        ="hist_data.root",
     #print hist_region_lst
     #load the histograms
     for r in hist_region_lst:
-        folder_r = HistLocStr(dist_name, r[0], r[1:], btag_WP, ("SB" if whichFunc == "SLAC" else "Sideband"), whichFunc)  #folder( r[0], r[1], btag_WP)
-        #print folder_r
-        data_r   = datafile.Get(folder_r).Clone("data_"+r)
-        top_r    = topfile.Get(folder_r).Clone("top_"+r)
-        zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
- 
-        for ibin in range(1, top_r.GetNbinsX()+1):
-            if top_r.GetBinContent(ibin) < 0:
-                top_r.SetBinContent(ibin, 0)
-                top_r.SetBinError(ibin, 0)
+        data_r = {}
+        top_r = {}
+        zjet_r = {}
+        for h in dist_name:
+            hist_fullpath = HistLocStr(h, r[0], r[1:], btag_WP, "Sideband", whichFunc)  #folder( r[0], r[1], btag_WP)
+            #print hist_fullpath
+            data_r[h] = datafile.Get(hist_fullpath).Clone("data_"+r+h)
+            top_r[h]  = topfile.Get(hist_fullpath).Clone("top_"+r+h)
+            zjet_r[h] = CheckAndGet(zjetfile, hist_fullpath, top_r).Clone("zjet_"+r+h)
+            # do rebin if necessary
+            if NRebin > 1:
+                data_r[h].Rebin(NRebin)
+                top_r[h].Rebin(NRebin)
+                zjet_r[h].Rebin(NRebin)
         
         histo_r  = {"data": data_r, "top": top_r, "zjet": zjet_r}
         histos[r] = histo_r
     # put relevant histograms in global lists for use in LogLk
     for r in regions:
-        hd = histos[r]["data"].Clone("h_data_"+r)
-        if nbtag_top_shape != None:
-            ht = histos[r]["top"].Clone("h_top_"+r)
-            #change for top selection, from 4b to 3b
-            if r[1:] == "4":
-                ht = histos[r[0] + "3"]["top"].Clone("h_top_"+r)
-            ht.Scale( histos[r]["top"].Integral() / ht.Integral() ) #scale to correct norm for region
-        else:
-            ht = histos[r]["top"].Clone("h_top_"+r)
-        hz = histos[r]["zjet"].Clone("h_zjet_"+r)
+        h_data[r] = {} #this is the data to fit
+        h_qcd[r] = {} #this is the qcd fit
+        h_top[r] = {} #this is the top fit
+        h_top_model[r] = {}
+        h_zjet[r] = {}
+        h_zjet_model[r] = {}
+        for h in dist_name:
+            hd = histos[r]["data"][h].Clone("h_data_"+r+h)
+            if nbtag_top_shape != None:
+                ht = histos[r]["top"][h].Clone("h_top_"+r+h)
+                #change for top selection, from 4b to 3b
+                if r[1:] == "4":
+                    ht = histos[r[0] + "3"]["top"][h].Clone("h_top_"+r+h)
+                ht.Scale( histos[r]["top"][h].Integral() / ht.Integral() ) #scale to correct norm for region
+            else:
+                ht = histos[r]["top"][h].Clone("h_top_"+r+h)
+            hz = histos[r]["zjet"][h].Clone("h_zjet_"+r+h)
 
-        #start background modeling
-        bkg_model = r[0]+str(BKG_model)
-        if r[1:] == "2s":
-            bkg_model = "2"+str(BKG_model)
-        elif r[1:] == "3":
-            bkg_model = "3"+str(BKG_model)
-        elif r[1:] == "4":
-            bkg_model = "4"+str(BKG_model)
-        #bkg_model = "42"
-        #load the histograms
-        hq = histos[bkg_model]["data"].Clone("h_qcd_"+r) #use 0 tag to fit now
-        ht2 = histos[bkg_model]["top"].Clone("h_top_model_"+r) #use 0 tag to fit now
-        hz2 = histos[bkg_model]["zjet"].Clone("h_zjet_"+r)
-        #substract top and Zjet contributions from data       
-        hq.Add( ht2, -1.0)
-        hq.Add( hz2, -1.0)
-        #link the dictionaries
-        h_data[r] = hd #this is the data to fit
-        h_qcd[r] = hq #this is the qcd fit
-        h_top[r] = ht #this is the top fit
-        h_top_model[r] = ht2
-        h_zjet[r] = hz 
-        h_zjet_model[r] = hz2
-        # do rebin if necessary
-        if NRebin > 1:
-            h_data[r].Rebin(NRebin)
-            h_qcd[r].Rebin(NRebin)
-            h_top[r].Rebin(NRebin)
-            h_top_model[r].Rebin(NRebin)
-            h_zjet[r].Rebin(NRebin)
-            h_zjet_model[r].Rebin(NRebin)
+            #start background modeling
+            bkg_model = r[0]+str(BKG_model)
+            if r[1:] == "2s":
+                bkg_model = "2"+str(BKG_model)
+            elif r[1:] == "3":
+                bkg_model = "3"+str(BKG_model)
+            elif r[1:] == "4":
+                bkg_model = "4"+str(BKG_model)
+            #bkg_model = "42"
+            #load the histograms
+            hq = histos[bkg_model]["data"][h].Clone("h_qcd_"+r+h) #use 0 tag to fit now
+            ht2 = histos[bkg_model]["top"][h].Clone("h_top_model_"+r+h) #use 0 tag to fit now
+            hz2 = histos[bkg_model]["zjet"][h].Clone("h_zjet_"+r+h)
+            #substract top and Zjet contributions from data       
+            hq.Add( ht2, -1.0)
+            hq.Add( hz2, -1.0)
+            #link the dictionaries, now as a dictionary again
+            h_data[r][h] = hd #this is the data to fit
+            h_qcd[r][h] = hq #this is the qcd fit
+            h_top[r][h] = ht #this is the top fit
+            h_top_model[r][h] = ht2
+            h_zjet[r][h] = hz 
+            h_zjet_model[r][h] = hz2
+
     #########################################################
     #Start the fit
     results = Fit( minuit )
@@ -246,81 +251,90 @@ def ComputeBasicMuQCD( histo_s, histo_c ):
 
 
 def MakePlot(region, muqcd, muttbar):
-    c=R.TCanvas()
-    c.SetName("fit" + region)
-    c.SetFillColor(0)
-    c.SetFrameFillColor(0)
+    for h in dist_name:
 
-    h_data2 = h_data[region].Clone("data2_"+region)
-    h_data2.SetFillColor(0)
-    h_data2.SetLineColor(R.kBlack)
-    h_data2.SetLineWidth(2)
-    h_data2.SetMaximum(h_data2.GetMaximum() * 1.3)
-    h_data2.SetXTitle( "Jet mass [GeV]")
-    h_data2.SetYTitle( "Entries" )
-    #h_data2.Rebin(nrebin)
-        
-    h_top2 = h_top[region].Clone("top2_"+region)
-    h_top2.Scale( muttbar )
-    h_top2.SetFillColor(R.kGreen)
-    h_top2.SetLineColor(R.kBlack)
-    h_top2.SetLineWidth(1)
-    #h_top2.Rebin(nrebin)
+        c=R.TCanvas()
+        c.SetName("fit" + region)
+        c.SetFillColor(0)
+        c.SetFrameFillColor(0)
 
-    h_zjet2 = h_zjet[region].Clone("zjet2_"+region)
-    h_zjet2.SetFillColor(R.kOrange)
-    h_zjet2.SetLineColor(R.kBlack)
-    h_zjet2.SetLineWidth(1)
-    #h_top2.Rebin(nrebin)
+        h_data2 = h_data[region][h].Clone("data2_"+region)
+        h_data2.SetMarkerSize(1)
+        h_data2.SetMarkerColor(R.kBlack)
+        h_data2.SetFillColor(0)
+        h_data2.SetLineColor(R.kBlack)
+        h_data2.SetLineWidth(2)
+        h_data2.SetMaximum(h_data2.GetMaximum() * 1.3)
+        h_data2.SetXTitle( "Jet mass [GeV]")
+        h_data2.SetYTitle( "Entries" )
+        #h_data2.Rebin(nrebin)
+            
+        h_top2 = h_top[region][h].Clone("top2_"+region)
+        h_top2.Scale( muttbar )
+        h_top2.SetFillColor(R.kGreen)
+        h_top2.SetLineColor(R.kBlack)
+        h_top2.SetLineWidth(1)
+        #h_top2.Rebin(nrebin)
 
-    h_qcd2 = h_qcd[region].Clone("qcd2_"+region)
-    h_qcd2.Scale( muqcd )
-    h_qcd2.SetLineColor(R.kRed)
-    h_qcd2.SetFillColor(0)
-    h_qcd2.SetLineWidth(1)
-    #h_qcd2.Rebin(nrebin)
+        h_zjet2 = h_zjet[region][h].Clone("zjet2_"+region)
+        h_zjet2.SetFillColor(R.kOrange)
+        h_zjet2.SetLineColor(R.kBlack)
+        h_zjet2.SetLineWidth(1)
+        #h_top2.Rebin(nrebin)
 
-    h_pred = h_top2.Clone("pred_"+region)
-    h_pred.Add( h_qcd2, 1.0)
-    h_pred.Add( h_zjet2, 1.0)
-    h_pred.SetLineColor(R.kBlue)
-    h_pred.SetFillColor(0)
-    h_pred.SetLineWidth(1)
+        h_qcd2 = h_qcd[region][h].Clone("qcd2_"+region)
+        h_qcd2.Scale( muqcd )
+        h_qcd2.SetLineColor(R.kRed)
+        h_qcd2.SetFillColor(0)
+        h_qcd2.SetLineWidth(1)
+        #h_qcd2.Rebin(nrebin)
+
+        h_pred = h_top2.Clone("pred_"+region)
+        h_pred.Add( h_qcd2, 1.0)
+        h_pred.Add( h_zjet2, 1.0)
+        h_pred.SetLineColor(R.kBlue)
+        h_pred.SetFillColor(0)
+        h_pred.SetLineWidth(1)
 
 
-    h_data2.Draw("E")
-    h_top2.Draw("sameHIST")
-    h_zjet2.Draw("sameHIST")
-    h_qcd2.Draw("sameHIST")
-    h_pred.Draw("sameHIST")
-    h_data2.Draw("sameE")
+        h_data2.Draw("E")
+        h_top2.Draw("sameHIST")
+        h_zjet2.Draw("sameHIST")
+        h_qcd2.Draw("sameHIST")
+        h_pred.Draw("sameHIST")
+        h_data2.Draw("sameE")
 
-    leg = R.TLegend(0.65,0.7,0.9,0.9)
-    leg.AddEntry(h_data2,"Data ("+region+"), 3.2 fb^{-1}","EL")
-    leg.AddEntry(h_top2,"ttbar MC","F")
-    leg.AddEntry(h_zjet2,"Z+jets MC","F")
-    leg.AddEntry(h_qcd2,"QCD model","L")
-    leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
-    leg.SetFillColor(0)
-    leg.SetBorderSize(0)
-    leg.Draw()
+        leg = R.TLegend(0.65,0.7,0.9,0.9)
+        leg.AddEntry(h_data2,"Data ("+region+"), 3.2 fb^{-1}","EL")
+        leg.AddEntry(h_top2,"ttbar MC","F")
+        leg.AddEntry(h_zjet2,"Z+jets MC","F")
+        leg.AddEntry(h_qcd2,"QCD model","L")
+        leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
+        leg.SetFillColor(0)
+        leg.SetBorderSize(0)
+        leg.Draw()
 
-    #raw_input()
+        l = R.TLatex(0.65, 0.65, h.replace("_", " "))
+        l.SetNDC()
+        l.SetTextSize(0.03)
+        l.Draw("same")
 
-    # print " "
-    # print "Region "+region+": Final Numbers after fit:"
-    # print "Ndata = ", h_data2.Integral()
-    # print "Npred = ", h_pred.Integral()
-    # print "Nqcd = ", h_qcd2.Integral()
-    # print "Ntop = ", h_top2.Integral()
-    # print "Nzjet = ", h_zjet2.Integral()
-    # print " "
+        #raw_input()
+        # print " "
+        # print "Region "+region+": Final Numbers after fit:"
+        # print "Ndata = ", h_data2.Integral()
+        # print "Npred = ", h_pred.Integral()
+        # print "Nqcd = ", h_qcd2.Integral()
+        # print "Ntop = ", h_top2.Integral()
+        # print "Nzjet = ", h_zjet2.Integral()
+        # print " "
 
-    c.Write()
-    if not os.path.exists(Output + "Plot/Fit"):
-        os.makedirs(Output + "Plot/Fit")
-    c.SaveAs(Output + "Plot/Fit/" + "fitNorm_"+region+".pdf")
-    c.Close()
+        c.Write()
+        if not os.path.exists(Output + "Plot/Fit"):
+            os.makedirs(Output + "Plot/Fit")
+        c.SaveAs(Output + "Plot/Fit/" + "fitNorm_"+region+"_"+h+".pdf")
+        c.Close()
+
     return
 
 
@@ -397,6 +411,7 @@ def Fit( minuit ):
             "corr_m": corr_m }
     return out
 
+
 def ClearMinuit( minuit ):
     minuit.Command("CLEAR")
     #initialize the parameters
@@ -405,16 +420,19 @@ def ClearMinuit( minuit ):
         intial_top = 1.2
         if "4" in reg:
             intial_muqcd = 0.0003
+            intial_top   = 1.22
         elif "3" in reg:
-            intial_muqcd = 0.005
+            intial_muqcd = 0.0049
+            intial_top   = 1.36
         elif "2s" in reg:
-            intial_muqcd = 0.02
+            intial_muqcd = 0.021
+            intial_top   = 1.3
         elif "2" in reg:
-            intial_muqcd = 0.03
-            intial_top = 3.6
+            intial_muqcd = 0.032
+            intial_top   = 3.1
         elif "1" in reg:
             intial_muqcd = 0.28
-            intial_top = 2.7
+            intial_top   = 2.9
         #DefineParameter(parNo, name, initVal, initErr, lowerLimit, upperLimit)
         minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 0.1, 0.0000001, 10)
         if useOneTopNuis and i!=0:
@@ -429,31 +447,31 @@ def NegLogL(npar, gin, f, par, ifag):
     L = 0.0
 
     for i in range(len(regions)):
-        
+        #setup the muqcd and ttbar scaling factors
         muqcd = par[i]
-
         if useOneTopNuis:
             muttbar = par[len(regions)]
         else:
             muttbar = par[i+len(regions)]
+        #get the region
         r = regions[i]
-        data_r = h_data[r]
-        qcd_r = h_qcd[r]
-        top_r = h_top[r]
-        zjet_r = h_zjet[r]
-        top_model_r = h_top_model[r]
-        Nbins = data_r.GetNbinsX()
-
-        for ibin in range(1,Nbins+1):
-            expected_i = muqcd * qcd_r.GetBinContent(ibin) + muttbar * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
-            
-            if scaleTop_model:
-                expected_i = expected_i + (muqcd * (1.0 - muttbar) * top_model_r.GetBinContent(ibin))
-                # use (1.0 - muttbar) since top_model is already subtracted from data to make qcd
-                # so we need to first add it back, and then subtract the newly scaled top_model
-        
-            if expected_i > 0:
-                L += expected_i - (data_r.GetBinContent(ibin)) * np.log( expected_i );
+        #loop over all the distributions
+        for h in dist_name:
+            data_r = h_data[r][h]
+            qcd_r = h_qcd[r][h]
+            top_r = h_top[r][h]
+            zjet_r = h_zjet[r][h]
+            top_model_r = h_top_model[r][h]
+            Nbins = data_r.GetNbinsX()
+            #add the distribution in, with the same region normalization
+            for ibin in range(1,Nbins+1):
+                expected_i = muqcd * qcd_r.GetBinContent(ibin) + muttbar * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
+                if scaleTop_model:
+                    expected_i = expected_i + (muqcd * (1.0 - muttbar) * top_model_r.GetBinContent(ibin))
+                    # use (1.0 - muttbar) since top_model is already subtracted from data to make qcd
+                    # so we need to first add it back, and then subtract the newly scaled top_model
+                if expected_i > 0:
+                    L += expected_i - (data_r.GetBinContent(ibin)) * np.log( expected_i )
 
     f[0] = L
     return
