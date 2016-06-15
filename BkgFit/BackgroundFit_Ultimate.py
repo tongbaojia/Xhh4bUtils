@@ -192,7 +192,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
     # print "top_scale = ", results["muttbar"], "+/-", results["muttbar_e"]
     # print "correlation=", results["corr_m"]
 
-    texoutpath = Output + "Plot/Tables/"
+    texoutpath = Output + "Tables/"
     if not os.path.exists(texoutpath):
         os.makedirs(texoutpath)
     fit_outtex = open( texoutpath + "normfit.tex", "w")
@@ -330,11 +330,15 @@ def MakePlot(region, muqcd, muttbar):
         # print " "
 
         c.Write()
-        if not os.path.exists(Output + "Plot/Fit"):
-            os.makedirs(Output + "Plot/Fit")
-        c.SaveAs(Output + "Plot/Fit/" + "fitNorm_"+region+"_"+h+".pdf")
+        if not os.path.exists(Output + "Fit"):
+            os.makedirs(Output + "Fit")
+        c.SaveAs(Output + "Fit/" + "fitNorm_"+region+"_"+h+".pdf")
         c.Close()
-
+        del(h_data2)
+        del(h_top2)
+        del(h_zjet2)
+        del(h_qcd2)
+        del(h_pred)
     return
 
 
@@ -417,29 +421,36 @@ def ClearMinuit( minuit ):
     #initialize the parameters
     for i, reg in enumerate(regions):
         intial_muqcd = 0.1
-        intial_top = 1.2
+        intial_top   = 1.2
+        steps_top    = 20.0
+        steps_muqcd  = 50.0
+        #needs to trick the fit to offset it a bit?
         if "4" in reg:
-            intial_muqcd = 0.0003
-            intial_top   = 1.22
+            intial_muqcd = 0.0002
+            intial_top   = 1.3
+            steps_muqcd  = 100
+            steps_top    = 100.0
         elif "3" in reg:
-            intial_muqcd = 0.0049
-            intial_top   = 1.36
+            intial_muqcd = 0.004
+            intial_top   = 1.3
+            steps_muqcd  = 100.0
+            steps_top    = 50.0
         elif "2s" in reg:
-            intial_muqcd = 0.021
+            intial_muqcd = 0.018
             intial_top   = 1.3
         elif "2" in reg:
-            intial_muqcd = 0.032
+            intial_muqcd = 0.031
             intial_top   = 3.1
         elif "1" in reg:
             intial_muqcd = 0.28
             intial_top   = 2.9
-        #DefineParameter(parNo, name, initVal, initErr, lowerLimit, upperLimit)
-        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 0.1, 0.0000001, 10)
+        #DefineParameter(parNo, name, initVal, initSTEP!, lowerLimit, upperLimit)
+        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.000001, 100)
         if useOneTopNuis and i!=0:
             continue
         muttbarName = "muttbar"+("_"+regions[i] if not useOneTopNuis else '')
         # minuit.DefineParameter(i+len(regions), muttbarName, 1.3, 0.01, 0.00001, 5)
-        minuit.DefineParameter(i+len(regions), muttbarName, intial_top, intial_top * 0.2, 0.0001, 100)
+        minuit.DefineParameter(i+len(regions), muttbarName, intial_top, intial_top * 1/steps_top, 0.0001, 200)
     return
     
 
