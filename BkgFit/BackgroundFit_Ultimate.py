@@ -426,20 +426,20 @@ def ClearMinuit( minuit ):
         steps_muqcd  = 50.0
         #needs to trick the fit to offset it a bit?
         if "4" in reg:
-            intial_muqcd = 0.0002
+            intial_muqcd = 0.0004
             intial_top   = 1.3
-            steps_muqcd  = 100
-            steps_top    = 100.0
+            steps_muqcd  = 200.0
+            steps_top    = 200.0
         elif "3" in reg:
-            intial_muqcd = 0.004
+            intial_muqcd = 0.0055
             intial_top   = 1.3
             steps_muqcd  = 100.0
             steps_top    = 50.0
         elif "2s" in reg:
-            intial_muqcd = 0.018
+            intial_muqcd = 0.025
             intial_top   = 1.3
         elif "2" in reg:
-            intial_muqcd = 0.031
+            intial_muqcd = 0.032
             intial_top   = 3.1
         elif "1" in reg:
             intial_muqcd = 0.28
