@@ -30,7 +30,13 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         npar = 3
         fitChoice = DijetFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(2, 20, -4)
+        func.SetParameters(40, 100, 8)
+
+    elif fitFunction == "Dijet_ttbar":
+        npar = 3
+        fitChoice = DijetFunc
+        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
+        func.SetParameters(10, 80, -10)
 
     elif fitFunction == "MJ2":
         npar = 3
@@ -758,9 +764,12 @@ def ExpoFunc(x, par):
     return np.exp(-par[0]*x[0] + par[1])
 
 def DijetFunc(x, par):
+    x = [np.array(i, dtype="float128") for i in x]
+    par = [np.array(i,dtype="float128") for i in par]
     z = x[0] / 13000.0
     #return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2])
     return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]* np.log(z)  )
+    #return np.exp(par[0]) * np.power(1.0-z, par[1]) * np.power(z, par[2])
 
 def MJ2Func(x, par):
     #https://cds.cern.ch/record/2026080
