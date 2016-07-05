@@ -16,8 +16,8 @@ import smoothfit
 rfunc1 = None
 rfunc2 = None
 
-def rfunc_ratio(x, par):
-    return rfunc1.Eval(x) / rfunc2.Eval(x)
+def rfunc_ratio(x):
+    return rfunc1.Eval(x[0]) / rfunc2.Eval(x[0])
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
@@ -198,12 +198,11 @@ def QCDSystematics(datafileName="hist_data.root",
         bkg_sm["nom"].Draw("same")
 
   
-        ## rfunc1 = data_sm["nom"]
-        ## rfunc2 = bkg_sm["nom"]
-        ## ratio_sm = R.TF1("ratio_sm"+r, rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
+        rfunc1 = data_sm["nom"]
+        rfunc2 = bkg_sm["nom"]
+        ratio_sm = R.TF1("ratio_crsys_sm"+r, rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
         ## ratio_sm.SetLineColor(R.kGray)
 
-        ## print ratio_sm.Eval(2000)
 
 
         for ivar in range(len(data_sm["vars"])):
@@ -238,7 +237,7 @@ def QCDSystematics(datafileName="hist_data.root",
 
         
 
-        QCDSyst_Dict["Shape_"+r] = h_ratio_cr
+        QCDSyst_Dict["Shape_"+r] = ratio_sm
 
         #scale is max of ratio non-unity and CR stat error 
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r), _extraNormCRSysDict.get(r, 0.) ] ) )
@@ -258,7 +257,7 @@ def QCDSystematics(datafileName="hist_data.root",
         h_ratio_cr.SetLineColor( R.kBlue )
         h_ratio_cr.Draw("same")
 
-        #ratio_sm.Draw("same")
+        ratio_sm.Draw("same")
 
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".root")
 
@@ -281,6 +280,10 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
                     makePlots = False,
                     verbose = False,
                     outfileNameBase="TopShapeSRSysfitSmooth.root"):
+
+    
+    global rfunc1
+    global rfunc2
     
     topfile  = R.TFile(topfileName,"READ")
 
@@ -337,6 +340,10 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     top_sig_sm["nom"].SetLineColor(R.kBlue)
     top_sig_sm["nom"].Draw("same")
 
+    rfunc1 = top_comp_sm["nom"]
+    rfunc2 = top_sig_sm["nom"]
+    ratio_sm = R.TF1("ratio_topsys_sm", rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
+
     for ivar in range(len(top_comp_sm["vars"])):
         dup = top_comp_sm["vars"][ivar][0]
         ddw = top_comp_sm["vars"][ivar][1]
@@ -367,7 +374,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     h_ratio_cr.SetDirectory(0)
         
 
-    ttbarShapeSRSyst_Dict["Shape"] = h_ratio_cr
+    ttbarShapeSRSyst_Dict["Shape"] = ratio_sm
         
         
     c2=R.TCanvas("c2_topsys","c2_topsys")
@@ -382,6 +389,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     h_ratio_cr.SetLineColor( R.kBlue )
     h_ratio_cr.Draw("same")
+
+    ratio_sm.Draw("same")
 
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.root")
 
