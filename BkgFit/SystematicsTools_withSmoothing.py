@@ -10,12 +10,21 @@ from GetEigenVariations import GetEigenVariations
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
 
+import smoothfit
+
+
+rfunc1 = None
+rfunc2 = None
+
+def rfunc_ratio(x, par):
+    return rfunc1.Eval(x) / rfunc2.Eval(x)
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
     # "44": 0.258,
     # "43": 0.126,
 }
+
 
 def QCDSystematics(datafileName="hist_data.root",
                     topfileName="hist_ttbar.root",
@@ -27,12 +36,17 @@ def QCDSystematics(datafileName="hist_data.root",
                     mu_qcd_vals = [1.0, 1.0],
                     topscale_vals = [1.0, 1.0],
                     NRebin = 1,
+                    smoothing_func = "Dijet",
+                    SmoothRange = (1100, 3000),# (100, 2500),
                     use_one_top_nuis = False,
                     use_scale_top_0b = False,
                     nbtag_top_shape_for4b = None,
                     makePlots = False,
                     verbose = False,
-                    outfileNameBase="QCDSysfit.root"):
+                    outfileNameBase="QCDSysfitSmooth.root"):
+
+    global rfunc1
+    global rfunc2
     
     ##### Parse Inputs ############################################
     dist_name   = distributionName
@@ -60,6 +74,9 @@ def QCDSystematics(datafileName="hist_data.root",
 
     regions = [ num_trkjet[i]+num_btag[i] for i in range(n_channels) ]
     ##################################################################
+
+
+    colorlist = [ R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]        
 
 
     ##### Get Signal Region Histograms ################################
@@ -110,7 +127,6 @@ def QCDSystematics(datafileName="hist_data.root",
         r = regions[ir]
                 
         r_0b = r[0]+"0"
-        r_3b = r[0]+"3"
 
         top_0b = histos[r_0b]["top"].Clone("top_0b__"+r)
         if scaleTop0b:
@@ -152,91 +168,100 @@ def QCDSystematics(datafileName="hist_data.root",
 
         N_bkg_r = bkg_r.Integral()
 
-        ## c=R.TCanvas()
-        ## bkg_r_c = bkg_r.Clone("bkg_clone__"+r)
-        ## bkg_r_c.SetDirectory(0)
-        ## bkg_r_c.Draw("HISTs")
-        ## data_r_c = histos[r]["data"].Clone("data_clone__"+r)
-        ## data_r_c.SetDirectory(0)
-        ## data_r_c.Draw("sames")
-        ## c.SaveAs(dist_name+"_CR_Quick_"+r+".root")
-        
-
-        #bkg_r.Divide( histos[r]["data"] )
-        #ratio = bkg_r
-
-        ratio = histos[r]["data"].Clone("ratio__"+r)
-        ratio.SetDirectory(0)
-        #ratio.Add( top_r, -1)
-
-        #store integral and error
         Err_N_data_CR_r = R.Double(0)
-        N_data_CR_r = ratio.IntegralAndError(0, ratio.GetNbinsX()+1, Err_N_data_CR_r)
+        N_data_CR_r =  histos[r]["data"].IntegralAndError(0, histos[r]["data"].GetNbinsX()+1, Err_N_data_CR_r)
+
+
+        bkg_r.Scale(histos[r]["data"].Integral() / bkg_r.Integral())
+
+
+        c=R.TCanvas("c1_cr_"+r,"c1_cr_"+r)
+        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        leg.SetFillColor(0)
+        histos[r]["data"].Draw("E1")
+
+        ##################################
+        ## smooth bkg and data
+        ##################################
+        data_sm = smoothfit.smoothfit(histos[r]["data"], fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, useLikelihood=True, outfileName="data_smoothfit_CRsyst_"+r+".root")
+        data_sm_h = smoothfit.MakeSmoothHisto(histos[r]["data"], data_sm["nom"])
+
+        data_sm["nom"].SetNameTitle("data_smoothfit_CRsyst_"+r,"data_smoothfit_CRsyst_"+r)
+        data_sm["nom"].SetLineColor(R.kBlack)
+        data_sm["nom"].Draw("same")
+
+        bkg_sm = smoothfit.smoothfit(bkg_r, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="bkg_smoothfit_CRsyst_"+r+".root")
+        bkg_sm_h = smoothfit.MakeSmoothHisto(bkg_r, bkg_sm["nom"])
+
+        bkg_sm["nom"].SetNameTitle("bkg_smoothfit_CRsyst_"+r,"bkg_smoothfit_CRsyst_"+r)
+        bkg_sm["nom"].SetLineColor(R.kBlue)
+        bkg_sm["nom"].Draw("same")
+
+  
+        ## rfunc1 = data_sm["nom"]
+        ## rfunc2 = bkg_sm["nom"]
+        ## ratio_sm = R.TF1("ratio_sm"+r, rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
+        ## ratio_sm.SetLineColor(R.kGray)
+
+        ## print ratio_sm.Eval(2000)
+
+
+        for ivar in range(len(data_sm["vars"])):
+            dup = data_sm["vars"][ivar][0]
+            ddw = data_sm["vars"][ivar][1]
+
+            dup.SetLineColor(colorlist[ivar])
+            ddw.SetLineColor(colorlist[ivar])
+
+            dup.Draw("same")
+            ddw.Draw("same")
+
+
+            data_r_qup = smoothfit.MakeSmoothHisto(histos[r]["data"], dup)
+            data_r_qdw = smoothfit.MakeSmoothHisto(histos[r]["data"], ddw)
+
+            for ibin in range(1,  data_sm_h.GetNbinsX()+1):
+                err_val = np.max( np.abs( [ data_sm_h.GetBinContent(ibin) - data_r_qup.GetBinContent(ibin), data_sm_h.GetBinContent(ibin) - data_r_qdw.GetBinContent(ibin)] ) )
+                data_sm_h.SetBinError(ibin, np.sqrt( data_sm_h.GetBinError(ibin)**2 + err_val**2) )
+
+        c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
+
+
+        h_ratio_cr_nom = data_sm_h.Clone("data_sm_h_CRsyst_"+r)
+        h_ratio_cr_nom.Divide( data_sm["nom"] )
+        h_ratio_cr_nom.SetDirectory(0)
+                
+        h_ratio_cr = data_sm["nom"].GetHistogram()
+        h_ratio_cr.Divide( bkg_sm["nom"] )
+        h_ratio_cr.SetDirectory(0)
+
+
         
-        #do division
-        ratio.Divide(  bkg_r )
 
-        #search for last bin with data, will be used for upper fit range
-        lastbin = 0
-        for ibin in reversed(range(ratio.GetNbinsX()+1)):
-            if ratio.GetBinContent(ibin) != 0:
-                lastbin = ibin
-                break
-
-        lastbin_Xval = ratio.GetBinLowEdge(lastbin) + ratio.GetBinWidth(lastbin)
-        fitRange = [1000, lastbin_Xval]
-
-        
-
-        ## fitting
-        if verbose:
-            print "QCD Ratio fit in SR=",r
-        fitName = "fit_"+outfileNameBase[:-5]
-        fitFunc, fitChoice, npar, params, cov = LinearFit(ratio, fitName, fitRange, verbose)
-
-
-
-
-        
-        ## Make fit variations, for shape uncertainties
-        outRange = [500, 3500]
-
-        fcen = R.TF1("QCDShape_f_"+r, fitChoice, outRange[0], outRange[1], npar)
-        fcen.SetParameters( params )
-
-        fup = R.TF1("QCDShape_fup_"+r, fitChoice, outRange[0], outRange[1], npar)
-        fup.SetParameters( params[0] - np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] + np.sqrt(cov[1,1]) )
-        fup.SetLineColor(R.kBlue)
-
-        fdw = R.TF1("QCDShape_fdw_"+r, fitChoice, outRange[0], outRange[1], npar)
-        fdw.SetParameters( params[0] + np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] - np.sqrt(cov[1,1]) )
-        fdw.SetLineColor(R.kBlue)
-
-        QCDSyst_Dict["Shape_"+r] = {"f":fcen, "fup":fup, "fdw":fdw}
+        QCDSyst_Dict["Shape_"+r] = h_ratio_cr
 
         #scale is max of ratio non-unity and CR stat error 
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r), _extraNormCRSysDict.get(r, 0.) ] ) )
         print "Scale_"+r, QCDSyst_Dict["Scale_"+r], N_bkg_r, N_data_CR_r, Err_N_data_CR_r,  (N_bkg_r - N_data_CR_r)/N_bkg_r, Err_N_data_CR_r / N_data_CR_r
-        #QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (1.0-params[0]),  (1.0 / np.sqrt(histos[r]["data"].Integral())) ] ) )  #this one was bugged a bit, keep anyway
+        
+        
+        c2=R.TCanvas("c2_cr_"+r,"c2_cr_"+r)
+        h_ratio_cr_nom.SetFillColor(R.kBlack)
+        h_ratio_cr_nom.SetFillStyle(3004)
+        h_ratio_cr_nom.SetMarkerSize(0)
+        h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
+        h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
+        h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
+        h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
+        h_ratio_cr_nom.Draw("E2")
 
-        if makePlots:
-            c=R.TCanvas()
-            #R.SetOwnership(c,False)
-            leg = R.TLegend(0.1,0.7,0.48,0.9)
-            leg.SetFillColor(0)
-            leg.AddEntry(ratio, "Ratio", "LP")
-            leg.AddEntry(fcen, "Ratio Fit", "L")
-            leg.AddEntry(fup, "Ratio Fit Variations", "L")
-            
-            ratio.SetLineColor(R.kBlack)
-            ratio.SetXTitle("m_{JJ} [GeV]")
-            ratio.SetYTitle("Ratio Data/Prediction")
-            ratio.Draw()
-            fcen.Draw("same")
-            fup.Draw("same")
-            fdw.Draw("same")
-            leg.Draw("same")
-            c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
+        h_ratio_cr.SetLineColor( R.kBlue )
+        h_ratio_cr.Draw("same")
+
+        #ratio_sm.Draw("same")
+
+        c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".root")
+
 
 
     datafile.Close()
@@ -251,11 +276,18 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
                     signal_region = "33",
                     compare_region = "44",
                     btag_WP     = "77",
+                    smoothing_func = "Exp",
+                    SmoothRange = (1100, 3000),# (100, 2500),
                     makePlots = False,
                     verbose = False,
-                    outfileNameBase="TopShapeSRSysfit.root"):
+                    outfileNameBase="TopShapeSRSysfitSmooth.root"):
     
     topfile  = R.TFile(topfileName,"READ")
+
+    ttbarShapeSRSyst_Dict= {}
+
+    colorlist = [ R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]        
+
     
     ## get top SR shape
     folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
@@ -282,74 +314,76 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
             top_comp.SetBinError(ibin, 0)
 
     ## normalize to same area
-    top_sig.Scale( 1.0 / top_sig.Integral() )
-    top_comp.Scale( 1.0 / top_comp.Integral() )
-
-    ## compute ratio
-    top_ratio = top_comp.Clone("top_ratio_sig"+signal_region+"_comp"+compare_region)
-    top_ratio.Divide( top_sig )
-
-    ## search for last bin with data, will be used for upper fit range
-    lastbin = 0
-    for ibin in reversed(range(top_ratio.GetNbinsX()+1)):
-        if top_ratio.GetBinContent(ibin) != 0:
-            lastbin = ibin
-            break
-
-    lastbin_Xval = top_ratio.GetBinLowEdge(lastbin) + top_ratio.GetBinWidth(lastbin)
-    #fitRange = [500, lastbin_Xval]
-    #print "ttbar fit range", fitRange
-    fitRange = [500, 1600]  ## reasonable range of bins with data
-
-    ## fitting
-    fitName = "fit_"+outfileNameBase[:-5]
-    fitFunc, fitChoice, npar, params, cov = LinearFit(top_ratio, fitName, fitRange, verbose)
+    top_sig.Scale( top_comp.Integral() / top_sig.Integral() )
 
 
-    ## Make fit variations, for shape uncertainties
-    outRange = [500, 3500]
 
-    fcen = R.TF1("ttbarShapeSR_f_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
-    fcen.SetParameters( params )
+    c=R.TCanvas("c1_topsys","c1_topsys")
+    leg = R.TLegend(0.1,0.7,0.48,0.9)
+    leg.SetFillColor(0)
+    top_comp.Draw("E1")
+    #################################
+    ## smooth bkg and data
+    ##################################
+    top_comp_sm = smoothfit.smoothfit(top_comp, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_comp_smoothfit_TopShape4b.root")
+    top_comp_sm_h = smoothfit.MakeSmoothHisto(top_comp, top_comp_sm["nom"])
 
-    frev = R.TF1("ttbarShapeSR_frev_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
-    frev.SetParameters( 2 - params[0], -params[1] )
-    frev.SetLineColor(R.kOrange)
+    top_comp_sm["nom"].SetLineColor(R.kBlack)
+    top_comp_sm["nom"].Draw("same")
 
-    fneg = R.TF1("ttbarShapeSR_fneg_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
-    fneg.SetParameters(params[0], -params[1] )
-    fneg.SetLineColor(R.kMagenta)
+    top_sig_sm = smoothfit.smoothfit(top_sig, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_sig_smoothfit_TopShape4.root")
+    top_sig_sm_h = smoothfit.MakeSmoothHisto(top_sig, top_sig_sm["nom"])
 
-    fup = R.TF1("ttbarShapeSR_fup_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
-    fup.SetParameters( params[0] - np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] + np.sqrt(cov[1,1]) )
-    fup.SetLineColor(R.kBlue)
+    top_sig_sm["nom"].SetLineColor(R.kBlue)
+    top_sig_sm["nom"].Draw("same")
 
-    fdw = R.TF1("ttbarShapeSR_fdw_sig"+signal_region+"_comp"+compare_region, fitChoice, outRange[0], outRange[1], npar)
-    fdw.SetParameters( params[0] + np.sqrt(cov[1,1])*(fitRange[1]+fitRange[0])/2.0, params[1] - np.sqrt(cov[1,1]) )
-    fdw.SetLineColor(R.kBlue)
+    for ivar in range(len(top_comp_sm["vars"])):
+        dup = top_comp_sm["vars"][ivar][0]
+        ddw = top_comp_sm["vars"][ivar][1]
 
-    ttbarShapeSRSyst_Dict = {"f":fcen, "frev":frev, "fup":fup, "fdw":fdw}
+        dup.SetLineColor(colorlist[ivar])
+        ddw.SetLineColor(colorlist[ivar])
 
-    if makePlots:
-        c=R.TCanvas()
-        #R.SetOwnership(c,False)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
-        leg.SetFillColor(0)
-        leg.AddEntry(top_ratio, "Ratio", "LP")
-        leg.AddEntry(fcen, "Ratio Fit", "L")
-        leg.AddEntry(fup, "Slope Variations", "L")
+        dup.Draw("same")
+        ddw.Draw("same")
+
+
+        top_comp_r_qup = smoothfit.MakeSmoothHisto(top_comp, dup)
+        top_comp_r_qdw = smoothfit.MakeSmoothHisto(top_comp, ddw)
+
+        for ibin in range(1,  top_comp_sm_h.GetNbinsX()+1):
+            err_val = np.max( np.abs( [ top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qup.GetBinContent(ibin), top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qdw.GetBinContent(ibin)] ) )
+            top_comp_sm_h.SetBinError(ibin, np.sqrt( top_comp_sm_h.GetBinError(ibin)**2 + err_val**2) )
+
+    c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".root")
+
+
+    h_ratio_cr_nom = top_comp_sm_h.Clone("top_comp_sm_h_TopShape4b")
+    h_ratio_cr_nom.Divide( top_comp_sm["nom"] )
+    h_ratio_cr_nom.SetDirectory(0)
+            
+    h_ratio_cr = top_comp_sm["nom"].GetHistogram()
+    h_ratio_cr.Divide( top_sig_sm["nom"] )
+    h_ratio_cr.SetDirectory(0)
         
-        top_ratio.SetLineColor(R.kBlack)
-        top_ratio.SetXTitle("m_{JJ} [GeV]")
-        top_ratio.SetYTitle("Ratio Data/Prediction")
-        top_ratio.Draw()
-        fcen.Draw("same")
-        #frev.Draw("same")
-        #fneg.Draw("same")
-        fup.Draw("same")
-        fdw.Draw("same")
-        leg.Draw("same")
-        c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+compare_region+ ".root")
+
+    ttbarShapeSRSyst_Dict["Shape"] = h_ratio_cr
+        
+        
+    c2=R.TCanvas("c2_topsys","c2_topsys")
+    h_ratio_cr_nom.SetFillColor(R.kBlack)
+    h_ratio_cr_nom.SetFillStyle(3004)
+    h_ratio_cr_nom.SetMarkerSize(0)
+    h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
+    h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
+    h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
+    h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
+    h_ratio_cr_nom.Draw("E2")
+
+    h_ratio_cr.SetLineColor( R.kBlue )
+    h_ratio_cr.Draw("same")
+
+    c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.root")
 
 
     topfile.Close()

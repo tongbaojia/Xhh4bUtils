@@ -1,5 +1,5 @@
 
-def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP="77", massRegion="SB", whichFunc="SLAC"):
+def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP="77", massRegion="SB", whichFunc="2016"):
     output = None
     
     if whichFunc == "SLAC":
@@ -8,6 +8,16 @@ def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP=
     elif whichFunc == "XhhBoosted":
         word_dict = {"4": "Four", "3" : "Three", "2" : "Two"}
         output = word_dict[nbtag] + "Tag_" + massRegion + "/" + distName
+
+    elif whichFunc =="2016":
+        tag_dict = {"4": "Four", "3" : "Three", "2" : "Two", "1":"One","0":"No"}
+        reg_dict = {"SB":"Sideband", "CR":"Control", "SR":"Signal"}
+        if nbtag == "3" or nbtag == "4":
+            output = tag_dict[nbtag] + "Tag_" +  reg_dict[massRegion] + "/" + distName
+        elif nbtag == "2":
+            output = tag_dict[nbtag] + "Tag_split_" +  reg_dict[massRegion] + "/" + distName
+        elif nbtag == "0":
+            output = tag_dict[nbtag] + "Tag_" + ntrackjet + "Trk_"+ ("split_" if ntrackjet=="2" else "")+ reg_dict[massRegion] + "/" + distName
 
     return output
 
@@ -64,7 +74,7 @@ def CheckAndGet(infile, folder, alternative_histo):
     
 def GetSignalHistos(infileName="hist_RSG_c10.root",
                     distName="ChannelNumber_DiJetMass",
-                    tagRegions=["44","43","42","33","32"],
+                    tagRegions=["44","33","22","40","30","20"],
                     massRegion="SR", btagWP="77",
                     massPoints=["all"]):
 
