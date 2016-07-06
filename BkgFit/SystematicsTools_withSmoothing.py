@@ -21,8 +21,9 @@ def rfunc_ratio(x):
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-    # "44": 0.258,
-    # "43": 0.126,
+     "44": 0.18,
+     "33": 0.09,
+     "22": 0.04
 }
 
 

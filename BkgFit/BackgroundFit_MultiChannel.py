@@ -412,7 +412,7 @@ def ClearMinuit( minuit ):
     minuit.Command("CLEAR")
 
     for i in range(len(regions)):
-        minuit.DefineParameter(i,"muqcd_"+regions[i], 0.01, 0.01, 0.00001, 1)
+        minuit.DefineParameter(i,"muqcd_"+regions[i], 0.001, 0.01, 0.00001, 1)
 
         if useOneTopNuis and i!=0:
             continue
