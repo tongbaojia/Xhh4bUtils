@@ -22,8 +22,8 @@ func2 = None
 # rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
 # nbtag_top_shape_normFit --- what top shape to be used in NORMALIZATION FIT?
 # nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
-def HistoAnalysis(datafileName="data/hist_data.root",
-                  topfileName="data/hist_ttbar.root",
+def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis/Output/b77/data_test/hist-MiniNTuple.root",
+                  topfileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis/Output/b77/ttbar_comb_test/hist-MiniNTuple.root",
                   zjetfileName=None,
                   distributionName= "mHH_l",
                   n_trkjet  = ["4","3","2"],

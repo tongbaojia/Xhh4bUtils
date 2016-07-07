@@ -1,5 +1,5 @@
 import ROOT as R
-import os
+
 import numpy as np
 import scipy.special
 from array import array
@@ -11,13 +11,13 @@ import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, verbose = False, useLikelihood=False, outfileName="fit.root", outfileName="fit", ouutfilepath=""):
+def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, verbose = False, useLikelihood=False, outfileName="fit.root"):
     npar = None
     func = None
     fitChoice = None
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink]
 
-    fitName = "fit_"+outfileName+"_%s" % (time.time())  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
+    fitName = "fit_"+outfileName[:-5]+"_%s" % (time.time())  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
     
     if fitFunction == "Exp":
         npar = 2
@@ -30,13 +30,6 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
         npar = 3
         fitChoice = DijetFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(40, 100, 8)
-
-    elif fitFunction == "Dijet_ttbar":
-        npar = 3
-        fitChoice = DijetFunc
-        func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        #func.SetParameters(10, 80, -10)
         func.SetParameters(-2, 20, -4)
 
     elif fitFunction == "MJ2":
@@ -115,7 +108,7 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
         c=R.TCanvas()
         #R.SetOwnership(c,False)
         histo.Draw()
-        c.SaveAs("failed__"+outfileName+".pdf")
+        c.SaveAs("failed__"+outfileName)
         sys.exit(0)
             
     
@@ -146,13 +139,6 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
     params = array('d',[0]*npar)
     fitFunc.GetParameters( params )
 
-
-    fit = []
-    fiterr = []
-    for i in range(npar):
-        fit.append(fitFunc.GetParameter(i))
-        fiterr.append(fitFunc.GetParError(i))
-
     z = np.asarray( params )
     z_variations = []
 
@@ -162,29 +148,27 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
         z_variations.append( [zu, zd] )
 
 
-    drawFunc = R.TF1("drawfit_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+    namestr = outfileName.split(".root")[0]
+
+    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, fitRange[0], 5000, npar)
     drawFunc.SetParameters( params )
 
     if makePlots:
         c=R.TCanvas()
         #R.SetOwnership(c,False)
-        leg = R.TLegend(0.65,0.68,0.8,0.88)
+        leg = R.TLegend(0.1,0.7,0.48,0.9)
         leg.SetFillColor(0)
         leg.AddEntry(histo, "Distribution", "LP")
         leg.AddEntry(drawFunc, "Fit", "L")
 
-        histo.SetMarkerStyle(20)
-        histo.SetMarkerColor(1)
-        histo.SetMarkerSize(1)
         histo.SetXTitle("m_{JJ} [GeV]")
         histo.SetYTitle("Entries")
         histo.Draw()
         drawFunc.Draw("same")
 
-
     fvar = []
     for ivar in range(len(z_variations)):
-        fup = R.TF1("fup_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+        fup = R.TF1("fup_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
         fup.SetParameters( z_variations[ivar][0] )
         fup.SetLineColor(colorlist[ivar])
         if makePlots:
@@ -192,7 +176,7 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
             # leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
             leg.AddEntry(fup, "Fit Variation "+str(ivar), "L")          # Qi
 
-        fdw = R.TF1("fdw_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+        fdw = R.TF1("fdw_"+str(ivar)+"_"+namestr, fitChoice, fitRange[0], 5000, npar)
         fdw.SetParameters( z_variations[ivar][1] )
         fdw.SetLineColor( colorlist[ivar] )
         if makePlots:
@@ -204,44 +188,21 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
     #raw_input()
 
     if makePlots:
-        outplotpath = ouutfilepath
-        
-
-        leg.SetBorderSize(0)
-        leg.SetMargin(0.3)
-        leg.SetTextSize(0.04)
         leg.Draw("same")
+        c.SaveAs(outfileName)
 
-        #print fit information
-        l = R.TLatex(0.68, 0.9, "Prob: %s; Chi2/NDOF: %s" % \
-            (str('%.2g' % func.GetProb()), str('%.2g' % (func.GetChisquare()/(func.GetNDF() * 1.0)))))
-        l.SetNDC()
-        l.SetTextSize(0.03)
-        l.Draw("same")
-
-        #for fitting debug
-        #print outfileName, "Prob: %s; Chi2/NDOF: %s" % \
-        #    (str('%.2g' % func.GetProb()), str('%.2g' % (func.GetChisquare()/(func.GetNDF() * 1.0))))
-
-        c.SetLogy(0)
-        c.SaveAs(outplotpath + outfileName + ".pdf")
-        c.SetLogy(1)
-        c.SaveAs(outplotpath + outfileName + "_l.pdf")
-
-        #fTxT = open(ouutfilepath + outfileName+".pkl", "w")
-        # fitResultDict = {
-        #   "params": params,
-        #   "cov": cov,
-        # }
-        # pickle.dump(fitResultDict, fTxT)
-        # fTxT.close()
-
-    fitResultDict = {
-          "params": fit,
-          "paramerrs": fiterr,
-          "corr": corr,
+        fTxT = open(outfileName[:-5]+".pkl", "w")
+        fitResultDict = {
+          "params": params,
+          "cov": cov,
         }
-    return {"nom": drawFunc, "vars":fvar, "res":fitResultDict}
+        pickle.dump(fitResultDict, fTxT)
+        fTxT.close()
+
+    
+    return {"nom": drawFunc, "vars":fvar}
+
+
 
 
 def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
@@ -769,12 +730,9 @@ def ExpoFunc(x, par):
     return np.exp(-par[0]*x[0] + par[1])
 
 def DijetFunc(x, par):
-    x = [np.array(i, dtype="float128") for i in x]
-    par = [np.array(i,dtype="float128") for i in par]
     z = x[0] / 13000.0
     #return np.exp( par[0] ) * np.power((1.0 - z), par[1]) * np.power(z, par[2])
     return np.exp(par[0] + par[1]* np.log((1.0 - z)) + par[2]* np.log(z)  )
-    #return np.exp(par[0]) * np.power(1.0-z, par[1]) * np.power(z, par[2])
 
 def MJ2Func(x, par):
     #https://cds.cern.ch/record/2026080
@@ -820,8 +778,12 @@ def GaussExp(x, par):
     crossover = par[4]
 
     ## nu = beta - (crossover - mu) / (sigma**2)
+    
     ## #crossover = (beta- nu) * (sigma**2) + mu
+
     ## normExp = np.exp( -0.5 * ( (crossover - mu) / sigma )**2 + beta * crossover )
+        
+
     ## f = norm * ( np.exp( -0.5 * ( (z - mu) / sigma )**2 ) * (1.0 / (1 + np.exp(-1.0 * nu * (crossover - z)) ) ) +
     ##              normExp * np.exp( -1.0 * beta * z )     * (1.0 / (1 + np.exp(-1.0 * nu * (z - crossover )) ) ) )
     
