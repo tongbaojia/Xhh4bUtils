@@ -27,7 +27,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   zjetfileName        ="hist_Zjets.root",
                   distributionName    = ["LeadCaloJetM"],
                   n_trkjet            = ["4", "3", "2", "1"],
-                  n_btag              = ["4", "3", "2s", "2", "1"], #["4", "3", "2s", "2", "1"],
+                  n_btag              = ["4", "3", "2s"], #["4", "3", "2s", "2", "1"],
                   btag_WP             = "77", #not useful for Xhh Framework
                   NRebin              = 1,
                   BKG_model           = 0, #define the bkg models
@@ -427,7 +427,7 @@ def ClearMinuit( minuit ):
         #needs to trick the fit to offset it a bit?
         if "4" in reg:
             intial_muqcd = 0.0004
-            intial_top   = 1.3
+            intial_top   = 2.0
             steps_muqcd  = 200.0
             steps_top    = 200.0
         elif "3" in reg:
