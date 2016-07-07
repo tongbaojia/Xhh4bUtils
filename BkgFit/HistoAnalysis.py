@@ -8,6 +8,7 @@ import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 
 import SystematicsTools as SystTools
+import SystematicsTools_withSmoothing as SystToolsSmooth
 import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 
 from HistoTools import HistLocationString as HistLocStr
@@ -21,26 +22,27 @@ func2 = None
 # rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
 # nbtag_top_shape_normFit --- what top shape to be used in NORMALIZATION FIT?
 # nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
-def HistoAnalysis(datafileName="hist_data.root",
-                  topfileName="hist_ttbar.root",
-                  zjetfileName="hist_Zjets.root",
-                  distributionName= "DiJetMass",
-                  n_trkjet  = ["4","4"],
-                  n_btag    = ["4","3"],
+def HistoAnalysis(datafileName="data/hist_data.root",
+                  topfileName="data/hist_ttbar.root",
+                  zjetfileName=None,
+                  distributionName= "mHH_l",
+                  n_trkjet  = ["4","3","2"],
+                  n_btag    = ["4","3","2"],
                   btag_WP     = "77",
-                  NRebin = 1,
+                  NRebin = 10,
                   use_one_top_nuis = False,
-                  use_scale_top_2b = False,
-                  nbtag_top_shape_normFit = None,
-                  nbtag_top_shape_SRPred = "3",
+                  use_scale_top_0b = False,
+                  nbtag_top_shape_normFit_for4b = "33",
+                  nbtag_top_shape_SRPred_for4b = "33",
                   rebinFinal = None,
-                  smoothing_func = "Exp",
+                  smoothing_func = "Dijet",
+                  top_smoothing_func = "Dijet",
                   inputFitResult = None,
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
                   addSmoothErrorBin = False,
-                  qcdSmoothRange = (900, 2000),# (100, 2500),
-                  topSmoothRange = (850, 2000), #(100, 2000),
+                  qcdSmoothRange = (1100, 3000),# (100, 2500),
+                  topSmoothRange = (1100, 3000), #(100, 2000),
                   isSystematicVariation = False,
                   verbose = False,
                   makeOutputFiles = True,
@@ -68,14 +70,14 @@ def HistoAnalysis(datafileName="hist_data.root",
     
     n_rebin     = NRebin
 
-    nbtag_top_shape = nbtag_top_shape_SRPred
-    topShape_nbtag = nbtag_top_shape
-    if nbtag_top_shape == None:
-        topShape_nbtag = num_btag
+    nbtag_top_shape_for4b = nbtag_top_shape_SRPred_for4b
+    topShape_nbtag_for4b = nbtag_top_shape_for4b
+    if nbtag_top_shape_for4b == None:
+        topShape_nbtag_for4b = num_btag+num_btag
 
     useOneTopNuis = use_one_top_nuis
 
-    scaleTop2b = use_scale_top_2b
+    scaleTop0b = use_scale_top_0b
 
     n_channels = num_trkjet.shape[0]
 
@@ -83,7 +85,9 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
     ##for outputing
-    do_smoothing  = (doSmoothing if (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime") else False)   # qi
+    isMhhDistribution = (distributionName=="mHH_l" or distributionName=="mHH_pole")
+
+    do_smoothing  = (doSmoothing if isMhhDistribution else False)   # qi
 
     ##################################################################
 
@@ -111,14 +115,14 @@ def HistoAnalysis(datafileName="hist_data.root",
         bkgFitResults = BkgFit. BackgroundFit(datafileName=datafileName,
                                               topfileName=topfileName,
                                               zjetfileName=zjetfileName,
-                                              distributionName= "LeadCaloJetM",
+                                              distributionName= "leadHCand_Mass",
                                               n_trkjet  = n_trkjet,
                                               n_btag    = n_btag,
                                               btag_WP     = btag_WP,
-                                              NRebin = NRebin,
+                                              NRebin = 2,#NRebin,
                                               use_one_top_nuis = use_one_top_nuis,
-                                              use_scale_top_2b = use_scale_top_2b,
-                                              nbtag_top_shape = nbtag_top_shape_normFit,
+                                              use_scale_top_0b = use_scale_top_0b,
+                                              nbtag_top_shape_for4b = nbtag_top_shape_normFit_for4b,
                                               makePlots = True,
                                               verbose = verbose )
 
@@ -134,22 +138,44 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##### Get QCD Shape Systematics from CR  ##############################
     if MassRegionName == "SR":
         # should only affect SR
-        if inputQCDSyst_Dict == None and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):  # qi
-            QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
-                                                    topfileName=topfileName,
-                                                    zjetfileName=zjetfileName,
-                                                    distributionName= "DiJetMass",   # this has been decided to fix on DiJetMass
-                                                    n_trkjet  = n_trkjet,
-                                                    n_btag    = n_btag,
-                                                    btag_WP     = btag_WP,
-                                                    mu_qcd_vals = bkgFitResults["muqcd"],
-                                                    topscale_vals = bkgFitResults["topscale"],
-                                                    NRebin = NRebin,
-                                                    use_one_top_nuis = use_one_top_nuis,
-                                                    use_scale_top_2b = use_scale_top_2b,
-                                                    makePlots = True,
-                                                    verbose = False,
-                                                    outfileNameBase="QCDSysfit.root")
+        if inputQCDSyst_Dict == None and isMhhDistribution:  # qi
+            QCDSyst_Dict =  SystToolsSmooth.QCDSystematics(datafileName=datafileName,
+                                        topfileName=topfileName,
+                                        zjetfileName=zjetfileName,
+                                        distributionName= "mHH_l",   # this has been decided to fix on DiJetMass
+                                        n_trkjet  = n_trkjet,
+                                        n_btag    = n_btag,
+                                        btag_WP     = btag_WP,
+                                        mu_qcd_vals = bkgFitResults["muqcd"],
+                                        topscale_vals = bkgFitResults["topscale"],
+                                        NRebin = 5,
+                                        smoothing_func = smoothing_func,
+                                        SmoothRange = (1100, 3000),# (100, 2500),
+                                        use_one_top_nuis = use_one_top_nuis,
+                                        use_scale_top_0b = use_scale_top_0b,
+                                        nbtag_top_shape_for4b = nbtag_top_shape_SRPred_for4b,
+                                        makePlots = True,
+                                        verbose = False,
+                                        outfileNameBase="QCDSysfitSmooth.root")
+
+            
+            ## QCDSyst_Dict = SystTools.QCDSystematics(datafileName=datafileName,
+            ##                                         topfileName=topfileName,
+            ##                                         zjetfileName=zjetfileName,
+            ##                                         distributionName= "mHH_l",   # this has been decided to fix on DiJetMass
+            ##                                         n_trkjet  = n_trkjet,
+            ##                                         n_btag    = n_btag,
+            ##                                         btag_WP     = btag_WP,
+            ##                                         mu_qcd_vals = bkgFitResults["muqcd"],
+            ##                                         topscale_vals = bkgFitResults["topscale"],
+            ##                                         NRebin = NRebin,
+            ##                                         use_one_top_nuis = use_one_top_nuis,
+            ##                                         use_scale_top_0b = use_scale_top_0b,
+            ##                                         nbtag_top_shape_for4b = nbtag_top_shape_SRPred_for4b,
+            ##                                         makePlots = True,
+            ##                                         verbose = False,
+            ##                                         outfileNameBase="QCDSysfit.root")
+            
         elif inputQCDSyst_Dict != None:
             QCDSyst_Dict = inputQCDSyst_Dict
 
@@ -162,19 +188,18 @@ def HistoAnalysis(datafileName="hist_data.root",
     ##################################################################
 
 
-
     
 
     ##### Get Signal Region Histograms ################################
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
-    zjetfile  = R.TFile(zjetfileName,"READ")
+    zjetfile  = ( R.TFile(zjetfileName,"READ") if zjetfileName!=None else None)
 
 
     histos = {}
     
     # collect all histograms
-    for r in ["44","43","42","33","32"]:
+    for r in ["44","33","22","40","30","20"]:
         # folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
         folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, MassRegionName)  #folder( r[0], r[1], btag_WP)
         
@@ -193,12 +218,20 @@ def HistoAnalysis(datafileName="hist_data.root",
             if top_r.GetBinContent(ibin) < 0:
                 top_r.SetBinContent(ibin, 0)
                 top_r.SetBinError(ibin, 0)
+
+
+        data_r.Rebin(n_rebin)
+        top_r.Rebin(n_rebin)
+        zjet_r.Rebin(n_rebin)
+
                 
 
         histos[r]     = {"data": data_r,  "top": top_r,  "zjet":zjet_r}
 
     datafile.Close()
     topfile.Close()
+    if zjetfile != None:
+        zjetfile.Close()
     ##################################################################
 
 
@@ -213,19 +246,20 @@ def HistoAnalysis(datafileName="hist_data.root",
         if makeOutputFiles:
             outfileStat = R.TFile("outfile_boosted_"+r+".root","RECREATE")
         
-        r_2b = r[0]+"2"
-        r_3b = r[0]+"3"
+        r_0b = r[0]+"0"
+        #r_3b = r[0]+"3"
 
-        top_2b = histos[r_2b]["top"].Clone("top_2b__"+r)
-        if scaleTop2b:
-            top_2b.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
+        top_0b = histos[r_0b]["top"].Clone("top_0b__"+r)
+        if scaleTop0b:
+            top_0b.Scale( (bkgFitResults["topscale"][0] if use_one_top_nuis else bkgFitResults["topscale"][ir]) )
 
-        zjet_2b = histos[r_2b]["zjet"].Clone("zjet_2b__"+r)
+        zjet_0b = histos[r_0b]["zjet"].Clone("zjet_0b__"+r)
 
-        qcd_r = histos[r_2b]["data"].Clone("qcd__"+r)
-        qcd_r.Add( top_2b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
-        qcd_r.Add( zjet_2b, -1)
+        qcd_r = histos[r_0b]["data"].Clone("qcd__"+r)
+        qcd_r.Add( top_0b, -1)      # added by Qi --- we still want top to be subtracted, given that their fraction is increasing in Run 2.
+        qcd_r.Add( zjet_0b, -1)
         qcd_int = qcd_r.Integral()
+
 
         for ibin in range(1, qcd_r.GetNbinsX()+1):
             if qcd_r.GetBinContent(ibin) < 0:
@@ -234,9 +268,9 @@ def HistoAnalysis(datafileName="hist_data.root",
 
 
         top_r = histos[r]["top"].Clone("top__"+r)
-        if (nbtag_top_shape =="3") and (r == "44") and (MassRegionName == "SR"):   # the 3b top shape is only used during the SR prediction for 44 region
-            temp_scaler = top_r.Integral() / histos[r_3b]["top"].Integral()
-            top_r = histos[r_3b]["top"].Clone("top__"+r)
+        if (nbtag_top_shape_for4b =="33") and (r == "44") and (MassRegionName == "SR"):   # the 3b top shape is only used during the SR prediction for 44 region
+            temp_scaler = top_r.Integral() / histos[nbtag_top_shape_for4b]["top"].Integral()
+            top_r = histos[nbtag_top_shape_for4b]["top"].Clone("top__"+r)
             top_r.Scale( temp_scaler )
         top_int = top_r.Integral()
 
@@ -271,7 +305,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             ## qcd_normed_sm = smoothfit.smoothfit(qcd_normed, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = True, outfileName="qcd_normed_smoothfit_"+r+".root")
             
             qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = True, verbose = False, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = False, outfileName="top_smoothfit_"+r+".root")
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = True, verbose = False, outfileName="top_smoothfit_"+r+".root")
     
             if addSmoothErrorBin:
                 qcd_final = smoothfit.MakeSmoothHistoWithError(qcd_r, qcd_sm)
@@ -403,7 +437,7 @@ def HistoAnalysis(datafileName="hist_data.root",
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1500", "1750", "2000"], fitMinVals=[str(qcdSmoothRange[0])],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0])],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
@@ -467,7 +501,7 @@ def HistoAnalysis(datafileName="hist_data.root",
                 if do_smoothing:
                     qvar_sm = smoothfit.smoothfit(qvar, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = False, verbose = verbose,
                                                   outfileName="qcd_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
-                    tvar_sm = smoothfit.smoothfit(tvar, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
+                    tvar_sm = smoothfit.smoothfit(tvar, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
                                                   outfileName="top_smoothfit_"+r+"_Norm"+str(ivar)+str(iUD)+".root")
 
                     if addSmoothErrorBin:
@@ -514,13 +548,13 @@ def HistoAnalysis(datafileName="hist_data.root",
         ########################################################################################################
         ####### QCD Shape and Norm estimated from CR            ################################################
         ########################################################################################################
-        if QCDSyst_Dict!=None and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):  # qi
+        if QCDSyst_Dict!=None and isMhhDistribution:  # qi
             
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
-            qvar_shape_up.Multiply( QCDSyst_Dict["Shape_"+r]["fup"] )
+            #qvar_shape_up.Multiply( QCDSyst_Dict["Shape_"+r]["fup"] )
 
             qvar_shape_dw = qcd_r.Clone("qvar_QCDshape_dw")
-            qvar_shape_dw.Multiply( QCDSyst_Dict["Shape_"+r]["fdw"] )
+            #qvar_shape_dw.Multiply( QCDSyst_Dict["Shape_"+r]["fdw"] )
 
             for ibinX in range(1, qvar_shape_up.GetNbinsX()+1):
                 if(qvar_shape_up.GetBinContent(ibinX) < 0):
@@ -551,6 +585,10 @@ def HistoAnalysis(datafileName="hist_data.root",
                 else:
                     qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"])
                     qvar_shape_dw_final = smoothfit.MakeSmoothHisto(qvar_shape_dw, qvar_shape_dw_sm["nom"])
+
+                qvar_shape_up_final.Multiply( QCDSyst_Dict["Shape_"+r] )
+                qvar_shape_dw_final.Divide( QCDSyst_Dict["Shape_"+r] )
+
 
                 qvar_shape_up_final.SetNameTitle("qcd_hh_"+r+"_QCDShapeCRUp__clone",     "qcd_hh_"+r+"_QCDShapeCRUp__clone")
                 qvar_shape_dw_final.SetNameTitle("qcd_hh_"+r+"_QCDShapeCRDown__clone",   "qcd_hh_"+r+"_QCDShapeCRDown__clone")
@@ -604,21 +642,32 @@ def HistoAnalysis(datafileName="hist_data.root",
         #####################################################################################################################
         ### top shape systematics in 4b region, if using 3b shape ###########################################################
         #####################################################################################################################
-        if r == "44" and nbtag_top_shape_SRPred == "3" and MassRegionName == "SR"  and (distributionName=="DiJetMass" or distributionName=="DiJetMassPrime"):   # qi
-            ttbarShapeSRSyst_Dict = SystTools.ttbarShapeSysSR(topfileName,
+        if r == "44" and nbtag_top_shape_SRPred_for4b == "33" and MassRegionName == "SR"  and isMhhDistribution:   # qi
+            ## ttbarShapeSRSyst_Dict = SystTools.ttbarShapeSysSR(topfileName,
+            ##                                                     distributionName,
+            ##                                                     signal_region = "22",
+            ##                                                     compare_region = "33",
+            ##                                                     btag_WP     = btag_WP,
+            ##                                                     makePlots = True,
+            ##                                                     verbose = False,
+            ##                                                     outfileNameBase="TopShapeSRSysfit.root")
+
+            ttbarShapeSRSyst_Dict = SystToolsSmooth.ttbarShapeSysSR(topfileName,
                                                                 distributionName,
-                                                                signal_region = "43",
-                                                                compare_region = "44",
+                                                                signal_region = "33",
+                                                                compare_region = "22",
                                                                 btag_WP     = btag_WP,
+                                                                smoothing_func = top_smoothing_func,
+                                                                SmoothRange = topSmoothRange,# (100, 2500),
                                                                 makePlots = True,
                                                                 verbose = False,
-                                                                outfileNameBase="TopShapeSRSysfit.root")
+                                                                outfileNameBase="TopShapeSRSysfitSmooth.root")
 
             tvar_shape_up = top_r.Clone("tvar_ttbarShapeSR_up")
-            tvar_shape_up.Multiply( ttbarShapeSRSyst_Dict["fup"] )
+            #tvar_shape_up.Multiply( ttbarShapeSRSyst_Dict["fup"] )
 
             tvar_shape_dw = top_r.Clone("tvar_ttbarShapeSR_dw")
-            tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["fdw"] )
+            #tvar_shape_dw.Multiply( ttbarShapeSRSyst_Dict["fdw"] )
 
 
             for ibinX in range(1, tvar_shape_up.GetNbinsX()+1):
@@ -637,10 +686,10 @@ def HistoAnalysis(datafileName="hist_data.root",
 
             ## Now do smoothing ##########################
             if do_smoothing:
-                tvar_shape_up_sm = smoothfit.smoothfit(tvar_shape_up, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
+                tvar_shape_up_sm = smoothfit.smoothfit(tvar_shape_up, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
                                                         outfileName="top_smoothfit_"+r+"_ttbarShapeSRUp.root")
 
-                tvar_shape_dw_sm = smoothfit.smoothfit(tvar_shape_dw, fitFunction = smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
+                tvar_shape_dw_sm = smoothfit.smoothfit(tvar_shape_dw, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = verbose,
                                                         outfileName="top_smoothfit_"+r+"_ttbarShapeSReDown.root")
 
                 if addSmoothErrorBin:
@@ -649,6 +698,9 @@ def HistoAnalysis(datafileName="hist_data.root",
                 else:
                     tvar_shape_up_final = smoothfit.MakeSmoothHisto(tvar_shape_up, tvar_shape_up_sm["nom"])
                     tvar_shape_dw_final = smoothfit.MakeSmoothHisto(tvar_shape_dw, tvar_shape_dw_sm["nom"])
+
+                tvar_shape_up_final.Multiply( ttbarShapeSRSyst_Dict["Shape"] )
+                tvar_shape_dw_final.Divide( ttbarShapeSRSyst_Dict["Shape"] )
 
                 tvar_shape_up_final.SetNameTitle("ttbar_hh_"+r+"_ttbarShapeSRUp__clone",     "ttbar_hh_"+r+"_ttbarShapeSRUp__clone")
                 tvar_shape_dw_final.SetNameTitle("ttbar_hh_"+r+"_ttbarShapeSRDown__clone",   "ttbar_hh_"+r+"_ttbarShapeSRDown__clone")

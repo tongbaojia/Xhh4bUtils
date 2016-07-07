@@ -14,27 +14,27 @@ from HistoTools import CheckAndGet
 regions = {}
 h_qcd = {}
 h_top = {}
-h_top_2b = {}
+h_top_0b = {}
 h_zjet = {}
-h_zjet_2b = {}
+h_zjet_0b = {}
 h_data = {}
 
 useOneTopNuis = None
-scaleTop2b = None
+scaleTop0b = None
 
 dist_name = None
 
 def BackgroundFit(datafileName="hist_data.root",
                   topfileName="hist_ttbar.root",
                   zjetfileName="hist_Zjets.root",
-                  distributionName= "LeadCaloJetM",
-                  n_trkjet  = ["4","4"],
-                  n_btag    = ["4","3"],
+                  distributionName= "leadHCand_Mass",
+                  n_trkjet  = ["4","3","2"],
+                  n_btag    = ["4","3","2"],
                   btag_WP     = "77",
                   NRebin = 1,
                   use_one_top_nuis = False,
-                  use_scale_top_2b = False,
-                  nbtag_top_shape = None,
+                  use_scale_top_0b = False,
+                  nbtag_top_shape_for4b = None,
                   makePlots = True,
                   whichFunc = "SLAC",
                   output = "",
@@ -42,10 +42,12 @@ def BackgroundFit(datafileName="hist_data.root",
     
     global h_qcd
     global h_top
-    global h_top_2b
+    global h_top_0b
+    global h_zjet
+    global h_zjet_0b
     global h_data
     global useOneTopNuis
-    global scaleTop2b
+    global scaleTop0b
     global regions
     global dist_name
     global Output
@@ -69,20 +71,22 @@ def BackgroundFit(datafileName="hist_data.root",
     
     n_rebin     = NRebin
 
-    topShape_nbtag = nbtag_top_shape
-    if nbtag_top_shape == None:
-        topShape_nbtag = num_btag
+    topShape_nbtag_for4b = nbtag_top_shape_for4b
+    if nbtag_top_shape_for4b == None:
+        topShape_nbtag_for4b = num_btag
 
     useOneTopNuis = use_one_top_nuis
 
-    scaleTop2b = use_scale_top_2b
+    scaleTop0b = use_scale_top_0b
     
     regions = [ num_trkjet[i]+num_btag[i] for i in range(num_trkjet.shape[0]) ]
 
     datafile = R.TFile(datafileName,"READ")
     topfile  = R.TFile(topfileName,"READ")
-    zjetfile = R.TFile(zjetfileName,"READ")
+    zjetfile  = ( R.TFile(zjetfileName,"READ") if zjetfileName!= None else None)
     Output   = output
+
+
 
     #########################################################
 
@@ -102,14 +106,12 @@ def BackgroundFit(datafileName="hist_data.root",
     histos = { }
 
     # collect all histograms
-    for r in ["44","43","42","33","32"]:
-        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, ("SB" if whichFunc == "SLAC" else "Sideband"), whichFunc)  #folder( r[0], r[1], btag_WP)
-        # print folder_r
+    for r in ["44","33","22","40","30","20"]:
+        folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+        #print folder_r
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         top_r    = topfile.Get(folder_r).Clone("top_"+r)
         zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
- 
-
 
         for ibin in range(1, top_r.GetNbinsX()+1):
             if top_r.GetBinContent(ibin) < 0:
@@ -125,37 +127,37 @@ def BackgroundFit(datafileName="hist_data.root",
     # put relevant histograms in global lists for use in LogLk
     for r in regions:
         hd = histos[r]["data"].Clone("h_data_"+r)
-        hq = histos[r[0]+"2"]["data"].Clone("h_qcd_"+r)
-        ht2 = histos[r[0]+"2"]["top"].Clone("h_top_2b_"+r)
+        hq = histos[r[0]+"0"]["data"].Clone("h_qcd_"+r)
+        ht0 = histos[r[0]+"0"]["top"].Clone("h_top_0b_"+r)
 
-        if nbtag_top_shape != None:
-            ht = histos[r[0]+nbtag_top_shape]["top"].Clone("h_top_"+r)
+        if nbtag_top_shape_for4b != None:
+            ht = histos[nbtag_top_shape_for4b]["top"].Clone("h_top_"+r)
             ht.Scale( histos[r]["top"].Integral() / ht.Integral() ) #scale to correct norm for region
         else:
             ht = histos[r]["top"].Clone("h_top_"+r)
 
         hz = histos[r]["zjet"].Clone("h_zjet_"+r)
-        hz2 = histos[r[0]+"2"]["zjet"].Clone("h_zjet_"+r)
+        hz0 = histos[r[0]+"0"]["zjet"].Clone("h_zjet_"+r)
 
 
        
-        hq.Add( ht2, -1.0)
-        hq.Add( hz2, -1.0)
+        hq.Add( ht0, -1.0)
+        hq.Add( hz0, -1.0)
         
         h_data[r] = hd 
         h_qcd[r] = hq 
         h_top[r] = ht 
-        h_top_2b[r] = ht2
+        h_top_0b[r] = ht0
         h_zjet[r] = hz 
-        h_zjet_2b[r] = hz2
+        h_zjet_0b[r] = hz0
 
         if NRebin > 1:
             h_data[r].Rebin(NRebin)
             h_qcd[r].Rebin(NRebin)
             h_top[r].Rebin(NRebin)
-            h_top_2b[r].Rebin(NRebin)
+            h_top_0b[r].Rebin(NRebin)
             h_zjet[r].Rebin(NRebin)
-            h_zjet_2b[r].Rebin(NRebin)
+            h_zjet_0b[r].Rebin(NRebin)
         
        
     
@@ -171,22 +173,24 @@ def BackgroundFit(datafileName="hist_data.root",
     results["pvars"] = pvars
 
     # store the input histograms for fitting
-    h_store_2b_data = histos[r[0]+"2"]["data"].Clone()
-    h_store_2b_data.SetDirectory(0)
-    results["inputhist_2b_data"] = h_store_2b_data
+    h_store_0b_data = histos[r[0]+"0"]["data"].Clone()
+    h_store_0b_data.SetDirectory(0)
+    results["inputhist_0b_data"] = h_store_0b_data
 
-    h_store_2b_ttbar = histos[r[0]+"2"]["top"].Clone()
-    h_store_2b_ttbar.SetDirectory(0)
-    results["inputhist_2b_ttbar"] = h_store_2b_ttbar
+    h_store_0b_ttbar = histos[r[0]+"0"]["top"].Clone()
+    h_store_0b_ttbar.SetDirectory(0)
+    results["inputhist_0b_ttbar"] = h_store_0b_ttbar
 
-    h_store_4b_data = histos[r[0]+"4"]["data"].Clone()
-    h_store_4b_data.SetDirectory(0)
-    results["inputhist_4b_data"] = h_store_4b_data
+    #h_store_4b_data = histos[r[0]+"4"]["data"].Clone()
+    #h_store_4b_data.SetDirectory(0)
+    #results["inputhist_4b_data"] = h_store_4b_data
 
-    h_store_4b_ttbar = histos[r[0]+"4"]["top"].Clone()
-    h_store_4b_ttbar.SetDirectory(0)
-    results["inputhist_4b_ttbar"] = h_store_4b_ttbar
+    #h_store_4b_ttbar = histos[r[0]+"4"]["top"].Clone()
+    #h_store_4b_ttbar.SetDirectory(0)
+    #results["inputhist_4b_ttbar"] = h_store_4b_ttbar
 
+
+    
     #print pnom
     #print pvars
 
@@ -201,10 +205,17 @@ def BackgroundFit(datafileName="hist_data.root",
         for i in range(len(regions)):
             c=MakePlot(regions[i], results["muqcd"][i], results["topscale"][0 if useOneTopNuis else i])
 
+            print ""
+            print "muqcd=", results["muqcd"][i], "+", results["muqcd_e_up"][i], "-", results["muqcd_e_dw"][i]
+            print "topscale=", results["topscale"][0 if useOneTopNuis else i], "+", results["topscale_e_up"][0 if useOneTopNuis else i], "-", results["topscale_e_dw"][0 if useOneTopNuis else i]
+            #print "corr=", results["corr_m"]
+            print ""
+
 
     datafile.Close()
     topfile.Close()
-    zjetfile.Close()
+    if zjetfile != None:
+        zjetfile.Close()
     
     return results
 
@@ -261,7 +272,7 @@ def MakePlot(region, muqcd, topscale):
     h_data2.SetFillColor(0)
     h_data2.SetLineColor(R.kBlack)
     h_data2.SetLineWidth(2)
-    h_data2.SetXTitle( "Leading jet mass [GeV]" if dist_name=="LeadCaloJetM" else dist_name)
+    h_data2.SetXTitle( "Leading jet mass [GeV]" if dist_name=="leadHCand_Mass" else dist_name)
     h_data2.SetYTitle( "Entries" )
     #h_data2.Rebin(nrebin)
         
@@ -405,7 +416,7 @@ def ClearMinuit( minuit ):
     minuit.Command("CLEAR")
 
     for i in range(len(regions)):
-        minuit.DefineParameter(i,"muqcd_"+regions[i], 0.01, 0.01, 0.00001, 1)
+        minuit.DefineParameter(i,"muqcd_"+regions[i], 0.001, 0.01, 0.00001, 1)
 
         if useOneTopNuis and i!=0:
             continue
@@ -434,15 +445,15 @@ def NegLogL(npar, gin, f, par, ifag):
         qcd_r = h_qcd[r]
         top_r = h_top[r]
         zjet_r = h_zjet[r]
-        top2b_r = h_top_2b[r]
+        top0b_r = h_top_0b[r]
 
         Nbins = data_r.GetNbinsX()
 
         for ibin in range(1,Nbins+1):
             expected_i = muqcd * qcd_r.GetBinContent(ibin) + topscale * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
             
-            if scaleTop2b:
-                expected_i = expected_i + (muqcd * (1.0 - topscale) * top2b_r.GetBinContent(ibin))
+            if scaleTop0b:
+                expected_i = expected_i + (muqcd * (1.0 - topscale) * top0b_r.GetBinContent(ibin))
                 # use (1.0 - topscale) since top2b is already subtracted from data to make qcd
                 # so we need to first add it back, and then subtract the newly scaled top2b
         
