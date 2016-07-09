@@ -136,6 +136,8 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
     
     fitFunc = histo.GetFunction(fitName)
 
+    fitProb = fitFunc.GetProb()
+
     params = array('d',[0]*npar)
     fitFunc.GetParameters( params )
 
@@ -200,14 +202,18 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
         fTxT.close()
 
     
-    return {"nom": drawFunc, "vars":fvar}
+    return {"nom": drawFunc, "vars":fvar, "prob":fitProb}
 
 
 
 
-def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
+def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  minProb = 0.001, integralMaxRatio = 2, makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
 
-    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]        
+    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]
+
+    funclist = ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]
+
+    funclist_pass = {}    
 
     namestr = outfileName.split(".root")[0]
 
@@ -220,8 +226,20 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), make
     results_hist = {}
     results_hist_ud = {}
 
-    for theFunc in ["Dijet", "Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
-        results[theFunc] = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
+    for theFunc in funclist:
+        curr_result = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
+        if curr_result["prob"] <  minProb:
+            funclist_pass[theFunc] = False
+            continue
+
+        if integralMaxRatio is not None and not PassIntegralCondition(h_clone, curr_result["nom"], integralMaxRatio):
+            funclist_pass[theFunc] = False
+            continue
+        
+        funclist_pass[theFunc] = True
+
+        
+        results[theFunc] = curr_result
         results_hist[theFunc] = MakeSmoothHisto(h_clone, results[theFunc]["nom"])
 
         results_hist_ud[theFunc] = {}
@@ -244,7 +262,10 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), make
     for ibin in range(1, histo.GetNbinsX()+1):
         deltas = []
         deltas_super = []
-        for theFunc in ["Dijet", "Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in funclist:
+            if funclist_pass[theFunc] == False:
+                continue
+            
             deltas.append( np.abs( results_hist[fitFunction].GetBinContent(ibin) - results_hist[theFunc].GetBinContent(ibin) ) )
 
             for ivarh in results_hist_ud[theFunc]:
@@ -278,7 +299,10 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), make
         icol = 0
         ivar0 = True
         err_hist_ratio = None
-        for theFunc in ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in funclist:
+
+            if funclist_pass[theFunc] == False:
+                continue
 
             if theFunc==fitFunction:
                 err_hist = MakeSmoothHisto(histo, results[theFunc]["nom"])
@@ -347,7 +371,10 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), make
 
 
         delta_ratio_super = {}
-        for theFunc in ["Dijet", "Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in funclist:
+            if funclist_pass[theFunc] == False:
+                continue
+            
             ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
@@ -395,7 +422,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), make
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], minProb = 0.001, integralMaxRatio = 2, makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]        
 
@@ -417,10 +444,23 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         fitPairs[str(fitRange[0])+"_"+maxRange] =   (fitRange[0], float(maxRange)) 
     for minRange in fitMinVals:
         fitPairs[minRange + "_"+str(fitRange[1])] = (float(minRange),fitRange[1])
+
+    fitPairs_pass={}
     
 
     for fpair in fitPairs:
-        results[fpair] = smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitPairs[fpair], makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
+        curr_result = smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitPairs[fpair], makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
+        if curr_result["prob"] < minProb:
+            fitPairs_pass[fpair] = False
+            continue
+
+        if integralMaxRatio is not None and not PassIntegralCondition(h_clone, curr_result["nom"], integralMaxRatio):
+            fitPairs_pass[fpair] = False
+            continue
+
+        fitPairs_pass[fpair] = True
+        
+        results[fpair] = curr_result
         results_hist[fpair] = MakeSmoothHisto(h_clone, results[fpair]["nom"])
 
         results_hist_ud[fpair] = {}
@@ -448,6 +488,9 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         deltas = []
         deltas_super = []
         for fpair in fitPairs:
+            if fitPairs_pass[fpair] == False:
+                continue
+            
             deltas.append( np.abs( results_hist[strNom].GetBinContent(ibin) - results_hist[fpair].GetBinContent(ibin) ) )
 
             for ivarh in results_hist_ud[fpair]:
@@ -490,6 +533,8 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         ivar0 = True
         err_hist_ratio = None
         for fpair in fitPairs:
+            if fitPairs_pass[fpair] == False:
+                continue
 
             if fpair==strNom:
                 err_hist = MakeSmoothHisto(histo, results[fpair]["nom"])
@@ -561,6 +606,9 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
 
         delta_ratio_super = {}
         for fpair in fitPairs:
+            if fitPairs_pass[fpair] == False:
+                continue
+            
             ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
@@ -722,6 +770,22 @@ def AddSysErrorToHist(h, sysList):
                  }
 
     return outputDict
+
+
+def PassIntegralCondition(hist, func, integralMaxRatio, testRanges = [[1500, 2000], [2000, 2500], [2500,5000]] ):
+    for itest in testRanges:
+        h_int = hist.Integral( hist.FindBin( itest[0] ), hist.FindBin( itest[1] ), "width")
+        f_int = func.Integral(itest[0], itest[1])
+        
+        if f_int == 0:
+            print "PassIntegralCondition:: function integral is Zero!!!"
+            sys.exit(0)
+
+        if h_int / f_int < 0.5 or  h_int / f_int > 2:
+            return False
+
+    return True
+        
 
 ############################################################################################
 ### functions

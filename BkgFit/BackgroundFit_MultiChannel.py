@@ -202,7 +202,7 @@ def BackgroundFit(datafileName="hist_data.root",
             print ""
             print "muqcd=", results["muqcd"][i], "+", results["muqcd_e_up"][i], "-", results["muqcd_e_dw"][i]
             print "topscale=", results["topscale"][0 if useOneTopNuis else i], "+", results["topscale_e_up"][0 if useOneTopNuis else i], "-", results["topscale_e_dw"][0 if useOneTopNuis else i]
-            #print "corr=", results["corr_m"]
+            print "corr=", results["corr_m"]
             print ""
 
 
