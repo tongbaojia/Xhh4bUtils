@@ -11,7 +11,7 @@ import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, outfileName="fit", ouutfilepath="", initpar=[]):
+def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, verbose = False, useLikelihood=False, outfileName="fit", ouutfilepath="", initpar=[]):
     npar = None
     func = None
     fitChoice = None
@@ -99,7 +99,8 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
 
 
     Vmode = ("Q" if not verbose else "")
-    fitResult = histo.Fit(fitName, "S0"+Vmode, "", fitRange[0], fitRange[1])
+    Lmode = ("L" if useLikelihood else "")
+    fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
 
     if fitResult.Status() != 0:
         print "Error in smoothing fit: did not terminate properly. Exiting"
@@ -237,9 +238,9 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     return {"nom": drawFunc, "vars":fvar, "res":fitResultDict}
 
 
-def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
+def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncCompare.root"):
 
-    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
+    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]     
 
     namestr = outfileName.split(".root")[0]
 
@@ -252,7 +253,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     results_hist = {}
     results_hist_ud = {}
 
-    for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+    for theFunc in ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
         results[theFunc] = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
         results_hist[theFunc] = MakeSmoothHisto(h_clone, results[theFunc]["nom"])
 
@@ -276,7 +277,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     for ibin in range(1, histo.GetNbinsX()+1):
         deltas = []
         deltas_super = []
-        for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
             deltas.append( np.abs( results_hist[fitFunction].GetBinContent(ibin) - results_hist[theFunc].GetBinContent(ibin) ) )
 
             for ivarh in results_hist_ud[theFunc]:
@@ -310,7 +311,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
         icol = 0
         ivar0 = True
         err_hist_ratio = None
-        for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
 
             if theFunc==fitFunction:
                 err_hist = MakeSmoothHisto(histo, results[theFunc]["nom"])
@@ -379,14 +380,14 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
 
 
         delta_ratio_super = {}
-        for theFunc in ["Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
+        for theFunc in ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]:
             ## func_ratio[theFunc] = lambda x: (results[theFunc]["nom"].Eval(x[0]) / results["Exp"]["nom"].Eval(x[0]))
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
             ## f_copy = f_ratio[theFunc].DrawCopy("same")
 
             h_ratio  = results[theFunc]["nom"].GetHistogram()
-            h_ratio.Divide( results["Exp"]["nom"] )
+            h_ratio.Divide( results[fitFunction]["nom"] )
             h_ratio.SetDirectory(0)
 
             h_ratio.SetLineColor( colorlist[icol] )
@@ -395,7 +396,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
             if plotExtra:
                 for ivar in range(len(results[theFunc]["vars"])):
                     h_ratio_ud = results[theFunc]["vars"][ivar][0].GetHistogram()
-                    h_ratio_ud.Divide( results["Exp"]["nom"] )
+                    h_ratio_ud.Divide( results[fitFunction]["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
@@ -404,7 +405,7 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
 
 
                     h_ratio_ud = results[theFunc]["vars"][ivar][1].GetHistogram()
-                    h_ratio_ud.Divide( results["Exp"]["nom"] )
+                    h_ratio_ud.Divide( results[fitFunction]["nom"] )
                     h_ratio_ud.SetDirectory(0)
                     h_ratio_ud.SetLineColor(R.kGray+2)
                     h_ratio_ud.Draw("same")
@@ -427,9 +428,9 @@ def smoothFuncCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), makePl
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Exp", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
-    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2]        
+    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]  
 
     namestr = outfileName.split(".root")[0]
 

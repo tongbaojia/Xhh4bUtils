@@ -84,10 +84,13 @@ def smoothFuncCompare(histo, fitFunction = "ExpModGauss", fitRange = (100, 3000)
     if makePlots:
         f = R.TFile(outfileName, "RECREATE")
         
-        c=R.TCanvas("c1","c1")
+        c=R.TCanvas("c1_err_hist","c1")
         #R.SetOwnership(c,False)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        xleg, yleg = 0.52, 0.7
+        leg = R.TLegend(xleg, yleg, xleg+0.3, yleg+0.2)
         leg.SetFillColor(0)
+        leg.SetBorderSize(0)
+        leg.SetMargin(0.3)
     
         h_clone.SetLineColor(R.kBlack)
         h_clone.Draw()
@@ -147,7 +150,7 @@ def smoothFuncCompare(histo, fitFunction = "ExpModGauss", fitRange = (100, 3000)
         
 
 
-        c2=R.TCanvas("c2","c2")
+        c2=R.TCanvas("c2_err_hist_ratio","c2")
         #R.SetOwnership(c,False)
         print "err_hist_ratio",err_hist_ratio
         err_hist_ratio.SetFillColor(R.kBlack)
@@ -194,9 +197,12 @@ def smoothFuncCompare(histo, fitFunction = "ExpModGauss", fitRange = (100, 3000)
         #for drs in delta_ratio_super:
         #    print drs, delta_ratio_super[drs]
 
+        c.SaveAs(namestr + "_" + c.GetName() +  ".pdf")
+        c2.SaveAs(namestr + "_" + c2.GetName() +  ".pdf")
         f.WriteTObject(c)
         f.WriteTObject(c2)
         f.Close()
+
         
     return smoothFuncCompSyst
 

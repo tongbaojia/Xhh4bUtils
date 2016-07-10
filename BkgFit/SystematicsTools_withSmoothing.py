@@ -1,15 +1,11 @@
 import ROOT as R
-
 import numpy as np
 from array import array
 import sys
 from copy import deepcopy
-
 from GetEigenVariations import GetEigenVariations
-
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
-
 import smoothfit
 
 
@@ -177,8 +173,11 @@ def QCDSystematics(datafileName="hist_data.root",
 
 
         c=R.TCanvas("c1_cr_"+r,"c1_cr_"+r)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        xleg, yleg = 0.52, 0.7
+        leg = R.TLegend(xleg, yleg, xleg+0.3, yleg+0.2)
         leg.SetFillColor(0)
+        leg.SetBorderSize(0)
+        leg.SetMargin(0.3)
         histos[r]["data"].Draw("E1")
 
         ##################################
@@ -224,7 +223,9 @@ def QCDSystematics(datafileName="hist_data.root",
                 err_val = np.max( np.abs( [ data_sm_h.GetBinContent(ibin) - data_r_qup.GetBinContent(ibin), data_sm_h.GetBinContent(ibin) - data_r_qdw.GetBinContent(ibin)] ) )
                 data_sm_h.SetBinError(ibin, np.sqrt( data_sm_h.GetBinError(ibin)**2 + err_val**2) )
 
+        c.SetLogy(1)
         c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
+        c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".pdf")
 
 
         h_ratio_cr_nom = data_sm_h.Clone("data_sm_h_CRsyst_"+r)
@@ -261,6 +262,7 @@ def QCDSystematics(datafileName="hist_data.root",
         ratio_sm.Draw("same")
 
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".root")
+        c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".pdf")
 
 
 
@@ -268,7 +270,6 @@ def QCDSystematics(datafileName="hist_data.root",
     topfile.Close()
     
     return QCDSyst_Dict
-
 
 
 def ttbarShapeSysSR(topfileName="hist_ttbar.root",
@@ -323,8 +324,11 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
 
     c=R.TCanvas("c1_topsys","c1_topsys")
-    leg = R.TLegend(0.1,0.7,0.48,0.9)
+    xleg, yleg = 0.52, 0.7
+    leg = R.TLegend(xleg, yleg, xleg+0.3, yleg+0.2)
     leg.SetFillColor(0)
+    leg.SetBorderSize(0)
+    leg.SetMargin(0.3)
     top_comp.Draw("E1")
     #################################
     ## smooth bkg and data
@@ -363,7 +367,9 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
             err_val = np.max( np.abs( [ top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qup.GetBinContent(ibin), top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qdw.GetBinContent(ibin)] ) )
             top_comp_sm_h.SetBinError(ibin, np.sqrt( top_comp_sm_h.GetBinError(ibin)**2 + err_val**2) )
 
+    c.SetLogy(1)
     c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".root")
+    c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".pdf")
 
 
     h_ratio_cr_nom = top_comp_sm_h.Clone("top_comp_sm_h_TopShape4b")
@@ -394,6 +400,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     ratio_sm.Draw("same")
 
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.root")
+    c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.pdf")
+
 
 
     topfile.Close()
