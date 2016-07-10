@@ -179,7 +179,10 @@ def QCDSystematics(datafileName="hist_data.root",
         c=R.TCanvas("c1_cr_"+r,"c1_cr_"+r)
         leg = R.TLegend(0.1,0.7,0.48,0.9)
         leg.SetFillColor(0)
+        histos[r]["data"].SetXTitle("m_{JJ} [GeV]")
+        histos[r]["data"].SetYTitle("Entries")
         histos[r]["data"].Draw("E1")
+        leg.AddEntry(histos[r]["data"], "CR data", "LP")
 
         ##################################
         ## smooth bkg and data
@@ -190,6 +193,7 @@ def QCDSystematics(datafileName="hist_data.root",
         data_sm["nom"].SetNameTitle("data_smoothfit_CRsyst_"+r,"data_smoothfit_CRsyst_"+r)
         data_sm["nom"].SetLineColor(R.kBlack)
         data_sm["nom"].Draw("same")
+        leg.AddEntry(data_sm["nom"], "CR data smoothed", "L")
 
         bkg_sm = smoothfit.smoothfit(bkg_r, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="bkg_smoothfit_CRsyst_"+r+".root")
         bkg_sm_h = smoothfit.MakeSmoothHisto(bkg_r, bkg_sm["nom"])
@@ -197,6 +201,8 @@ def QCDSystematics(datafileName="hist_data.root",
         bkg_sm["nom"].SetNameTitle("bkg_smoothfit_CRsyst_"+r,"bkg_smoothfit_CRsyst_"+r)
         bkg_sm["nom"].SetLineColor(R.kBlue)
         bkg_sm["nom"].Draw("same")
+        leg.AddEntry(bkg_sm["nom"], "CR Prediction smoothed", "L")
+
 
   
         rfunc1 = data_sm["nom"]
@@ -215,6 +221,7 @@ def QCDSystematics(datafileName="hist_data.root",
 
             dup.Draw("same")
             ddw.Draw("same")
+            leg.AddEntry(dup, "CR data smoothed variation", "L")
 
 
             data_r_qup = smoothfit.MakeSmoothHisto(histos[r]["data"], dup)
@@ -224,6 +231,7 @@ def QCDSystematics(datafileName="hist_data.root",
                 err_val = np.max( np.abs( [ data_sm_h.GetBinContent(ibin) - data_r_qup.GetBinContent(ibin), data_sm_h.GetBinContent(ibin) - data_r_qdw.GetBinContent(ibin)] ) )
                 data_sm_h.SetBinError(ibin, np.sqrt( data_sm_h.GetBinError(ibin)**2 + err_val**2) )
 
+        leg.Draw("same")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
 
 
@@ -246,6 +254,8 @@ def QCDSystematics(datafileName="hist_data.root",
         
         
         c2=R.TCanvas("c2_cr_"+r,"c2_cr_"+r)
+        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        leg.SetFillColor(0)
         h_ratio_cr_nom.SetFillColor(R.kBlack)
         h_ratio_cr_nom.SetFillStyle(3004)
         h_ratio_cr_nom.SetMarkerSize(0)
@@ -253,13 +263,19 @@ def QCDSystematics(datafileName="hist_data.root",
         h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
         h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
+        h_ratio_cr_nom.SetXTitle("m_{JJ} [GeV]")
+        h_ratio_cr_nom.SetYTitle("Ratio")
         h_ratio_cr_nom.Draw("E2")
+        leg.AddEntry(h_ratio_cr_nom, "CR data", "LF")
+
 
         h_ratio_cr.SetLineColor( R.kBlue )
         h_ratio_cr.Draw("same")
+        leg.AddEntry(h_ratio_cr, "CR Prediction", "L")
+
 
         ratio_sm.Draw("same")
-
+        leg.Draw("same")
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".root")
 
 
@@ -325,7 +341,11 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     c=R.TCanvas("c1_topsys","c1_topsys")
     leg = R.TLegend(0.1,0.7,0.48,0.9)
     leg.SetFillColor(0)
+    top_comp.SetXTitle("m_{JJ} [GeV]")
+    top_comp.SetYTitle("Entries")
     top_comp.Draw("E1")
+    leg.AddEntry(top_comp, "Top Comparison Distribution", "LP")
+
     #################################
     ## smooth bkg and data
     ##################################
@@ -334,12 +354,16 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     top_comp_sm["nom"].SetLineColor(R.kBlack)
     top_comp_sm["nom"].Draw("same")
+    leg.AddEntry(top_comp_sm["nom"], "Top Comparison Distribution Smooth", "L")
+
 
     top_sig_sm = smoothfit.smoothfit(top_sig, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_sig_smoothfit_TopShape4.root")
     top_sig_sm_h = smoothfit.MakeSmoothHisto(top_sig, top_sig_sm["nom"])
 
     top_sig_sm["nom"].SetLineColor(R.kBlue)
     top_sig_sm["nom"].Draw("same")
+    leg.AddEntry(top_sig_sm["nom"], "Top Nominal Distribution Smooth", "L")
+
 
     rfunc1 = top_comp_sm["nom"]
     rfunc2 = top_sig_sm["nom"]
@@ -354,6 +378,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
         dup.Draw("same")
         ddw.Draw("same")
+        leg.AddEntry(dup, "Top Comparison Smooth Variation", "L")
 
 
         top_comp_r_qup = smoothfit.MakeSmoothHisto(top_comp, dup)
@@ -363,6 +388,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
             err_val = np.max( np.abs( [ top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qup.GetBinContent(ibin), top_comp_sm_h.GetBinContent(ibin) - top_comp_r_qdw.GetBinContent(ibin)] ) )
             top_comp_sm_h.SetBinError(ibin, np.sqrt( top_comp_sm_h.GetBinError(ibin)**2 + err_val**2) )
 
+    leg.Draw("same")
     c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".root")
 
 
@@ -379,6 +405,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
         
         
     c2=R.TCanvas("c2_topsys","c2_topsys")
+    leg = R.TLegend(0.1,0.7,0.48,0.9)
+    leg.SetFillColor(0)
     h_ratio_cr_nom.SetFillColor(R.kBlack)
     h_ratio_cr_nom.SetFillStyle(3004)
     h_ratio_cr_nom.SetMarkerSize(0)
@@ -386,13 +414,20 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
     h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
     h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
+    h_ratio_cr_nom.SetXTitle("m_{JJ} [GeV]")
+    h_ratio_cr_nom.SetYTitle("Ratio")
     h_ratio_cr_nom.Draw("E2")
+    leg.AddEntry(h_ratio_cr_nom, "Nominal", "LF")
+
 
     h_ratio_cr.SetLineColor( R.kBlue )
     h_ratio_cr.Draw("same")
+    leg.AddEntry(h_ratio_cr, "Predicted", "L")
 
-    ratio_sm.Draw("same")
 
+    #ratio_sm.Draw("same")
+
+    leg.Draw("same")
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.root")
 
 

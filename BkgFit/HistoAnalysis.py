@@ -437,7 +437,7 @@ def HistoAnalysis(datafileName="data/hist_data.root",
             
             #smoothfit.smoothFuncRangeCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]), makePlots = True, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0])],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1200","1500"],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
@@ -655,7 +655,7 @@ def HistoAnalysis(datafileName="data/hist_data.root",
             ttbarShapeSRSyst_Dict = SystToolsSmooth.ttbarShapeSysSR(topfileName,
                                                                 distributionName,
                                                                 signal_region = "33",
-                                                                compare_region = "44",
+                                                                compare_region = "22",
                                                                 btag_WP     = btag_WP,
                                                                 smoothing_func = top_smoothing_func,
                                                                 SmoothRange = topSmoothRange,# (100, 2500),

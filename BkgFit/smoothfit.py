@@ -152,7 +152,9 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
 
     namestr = outfileName.split(".root")[0]
 
-    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, fitRange[0], 5000, npar)
+    #drawFunc = R.TF1("drawfit_"+namestr, fitChoice, fitRange[0], 5000, npar)
+    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, 1100, 5000, npar)
+
     drawFunc.SetParameters( params )
 
     if makePlots:
