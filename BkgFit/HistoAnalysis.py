@@ -355,7 +355,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
             output_Dict[r]["qcd"]["smoothFuncup_super"] = qcd_r_func_up_super
             output_Dict[r]["qcd"]["smoothFuncdown_super"] = qcd_r_func_dw_super
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0])],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1200","1500"],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################
