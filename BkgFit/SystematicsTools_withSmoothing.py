@@ -176,13 +176,10 @@ def QCDSystematics(datafileName="hist_data.root",
         xleg, yleg = 0.52, 0.7
         leg = R.TLegend(xleg, yleg, xleg+0.3, yleg+0.2)
         leg.SetFillColor(0)
-<<<<<<< HEAD
         leg.SetBorderSize(0)
         leg.SetMargin(0.3)
-=======
         histos[r]["data"].SetXTitle("m_{JJ} [GeV]")
         histos[r]["data"].SetYTitle("Entries")
->>>>>>> upstream/master
         histos[r]["data"].Draw("E1")
         leg.AddEntry(histos[r]["data"], "CR data", "LP")
 
@@ -209,7 +206,8 @@ def QCDSystematics(datafileName="hist_data.root",
   
         rfunc1 = data_sm["nom"]
         rfunc2 = bkg_sm["nom"]
-        ratio_sm = R.TF1("ratio_crsys_sm"+r, rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
+        xMax   = histos[r]["data"].GetXaxis().GetBinUpEdge(histos[r]["data"].GetXaxis().GetNbins())
+        ratio_sm = R.TF1("ratio_crsys_sm"+r, rfunc_ratio, SmoothRange[0], xMax, 0)
         ## ratio_sm.SetLineColor(R.kGray)
 
 
@@ -374,7 +372,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     rfunc1 = top_comp_sm["nom"]
     rfunc2 = top_sig_sm["nom"]
-    ratio_sm = R.TF1("ratio_topsys_sm", rfunc_ratio, SmoothRange[0], SmoothRange[1], 0)
+    xMax = top_comp.GetXaxis().GetBinUpEdge(top_comp.GetXaxis().GetNbins())
+    ratio_sm = R.TF1("ratio_topsys_sm", rfunc_ratio, SmoothRange[0], xMax, 0)
 
     for ivar in range(len(top_comp_sm["vars"])):
         dup = top_comp_sm["vars"][ivar][0]

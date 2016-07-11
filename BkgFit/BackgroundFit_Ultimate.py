@@ -19,7 +19,7 @@ h_zjet = {}#zjet histogram
 h_zjet_model = {}#zjet modeling
 h_data = {}#data modeling
 
-useOneTopNuis = None
+useOneTopNuis  = None
 scaleTop_model = None
 
 def BackgroundFit(datafileName        ="hist_data.root",
@@ -37,6 +37,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   makePlots           = True,
                   whichFunc           = "XhhBoosted",
                   output              = "",
+                  fitzjets            = False,
                   verbose             = False ):
     
     global h_qcd
@@ -48,6 +49,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
     global scaleTop_model
     global regions
     global Output
+    global Fitzjets
     ################### Parse  #########################
     # num_trkjet  = np.asarray(n_trkjet)
     # if num_trkjet.shape==():
@@ -64,6 +66,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
     useOneTopNuis = use_one_top_nuis
     scaleTop_model = use_scale_top_model
     dist_name = distributionName
+    Fitzjets  = fitzjets
     ########################################################
     #setup regions to fit
     regions = [ "i" + n_btag[i] for i in range(len(n_btag)) ]
@@ -146,7 +149,8 @@ def BackgroundFit(datafileName        ="hist_data.root",
             hz2 = histos[bkg_model]["zjet"][h].Clone("h_zjet_"+r+h)
             #substract top and Zjet contributions from data       
             hq.Add( ht2, -1.0)
-            hq.Add( hz2, -1.0)
+            if (Fitzjets):
+                hq.Add( hz2, -1.0) #do not substract z+jets
             #link the dictionaries, now as a dictionary again
             h_data[r][h] = hd #this is the data to fit
             h_qcd[r][h] = hq #this is the qcd fit
@@ -291,7 +295,8 @@ def MakePlot(region, muqcd, muttbar):
 
         h_pred = h_top2.Clone("pred_"+region)
         h_pred.Add( h_qcd2, 1.0)
-        h_pred.Add( h_zjet2, 1.0)
+        if (Fitzjets):
+            h_pred.Add( h_zjet2, 1.0)
         h_pred.SetLineColor(R.kBlue)
         h_pred.SetFillColor(0)
         h_pred.SetLineWidth(1)
@@ -299,15 +304,17 @@ def MakePlot(region, muqcd, muttbar):
 
         h_data2.Draw("E")
         h_top2.Draw("sameHIST")
-        h_zjet2.Draw("sameHIST")
+        if (Fitzjets):
+            h_zjet2.Draw("sameHIST")
         h_qcd2.Draw("sameHIST")
         h_pred.Draw("sameHIST")
         h_data2.Draw("sameE")
 
         leg = R.TLegend(0.65,0.7,0.9,0.9)
-        leg.AddEntry(h_data2,"Data ("+region+"), 3.2 fb^{-1}","EL")
+        leg.AddEntry(h_data2,"Data ("+region+"), 2015 + 2016","EL")
         leg.AddEntry(h_top2,"ttbar MC","F")
-        leg.AddEntry(h_zjet2,"Z+jets MC","F")
+        if (Fitzjets):
+            leg.AddEntry(h_zjet2,"Z+jets MC","F")
         leg.AddEntry(h_qcd2,"QCD model","L")
         leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
         leg.SetFillColor(0)
