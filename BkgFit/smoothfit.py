@@ -11,7 +11,7 @@ import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = False, verbose = False, useLikelihood=False, outfileName="fit.root"):
+def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_start = None, makePlots = False, verbose = False, useLikelihood=False, outfileName="fit.root"):
     npar = None
     func = None
     fitChoice = None
@@ -152,8 +152,10 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), makePlots = 
 
     namestr = outfileName.split(".root")[0]
 
+    draw_start_range = (fitRange[0] if outrange_start is None else outrange_start)
+
     #drawFunc = R.TF1("drawfit_"+namestr, fitChoice, fitRange[0], 5000, npar)
-    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, 1100, 5000, npar)
+    drawFunc = R.TF1("drawfit_"+namestr, fitChoice, draw_start_range, 5000, npar)
 
     drawFunc.SetParameters( params )
 
@@ -451,7 +453,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
     
 
     for fpair in fitPairs:
-        curr_result = smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitPairs[fpair], makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
+        curr_result = smoothfit(h_clone, fitFunction = fitFunction, fitRange = fitPairs[fpair], outrange_start = fitRange[0], makePlots = False, verbose = verbose, outfileName =maxRange+"_"+outfileName)
         if curr_result["prob"] < minProb:
             fitPairs_pass[fpair] = False
             continue
