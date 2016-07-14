@@ -1,7 +1,7 @@
 import ROOT as R
 import numpy as np
 from copy import deepcopy
-import sys, time
+import sys, time, argparse, os, glob
 import smoothfit
 import BackgroundFit_MultiChannel as BkgFit
 import SystematicsTools_withSmoothing as SystToolsSmooth
@@ -45,6 +45,10 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                   ):
     ##### Parse Inputs ############################################
     dist_name   = distributionName
+    print "the chosen hist is: ", dist_name
+    if "pole" in distributionName:#change the smoothing range if pole distributions
+        qcdSmoothRange = (1200, 3000)
+        topSmoothRange = (1200, 3000)
     
     num_trkjet  = np.asarray(n_trkjet)
     if num_trkjet.shape==():
@@ -96,13 +100,13 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                                               distributionName= "leadHCand_Mass",
                                               n_trkjet  = n_trkjet,
                                               n_btag    = n_btag,
-                                              btag_WP     = btag_WP,
-                                              NRebin = 2,#NRebin,
+                                              btag_WP   = btag_WP,
+                                              NRebin    = 2,#NRebin,
                                               use_one_top_nuis = use_one_top_nuis,
                                               use_scale_top_0b = use_scale_top_0b,
                                               nbtag_top_shape_for4b = nbtag_top_shape_normFit_for4b,
                                               makePlots = True,
-                                              verbose = verbose )
+                                              verbose   = verbose )
 
     else:
         bkgFitResults = inputFitResult
@@ -714,10 +718,17 @@ def PrintTable( Nbkg_dict, Nbkg_SysList, Regions):
 
     print outtext
 
+#define functions
+def options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hist", default="mHH_l")
+    return parser.parse_args()
 
 
 if __name__=="__main__":
     start_time = time.time()
-    HistoAnalysis()
+    global ops
+    ops = options()
+    HistoAnalysis(distributionName= ops.hist)
     print("--- %s seconds ---" % (time.time() - start_time))
 
