@@ -433,18 +433,18 @@ def ClearMinuit( minuit ):
         steps_muqcd  = 50.0
         #needs to trick the fit to offset it a bit?
         if "4" in reg:
-            intial_muqcd = 0.0004
+            intial_muqcd = 0.00093
             intial_top   = 2.0
             steps_muqcd  = 200.0
             steps_top    = 200.0
         elif "3" in reg:
-            intial_muqcd = 0.0055
-            intial_top   = 1.3
+            intial_muqcd = 0.0085
+            intial_top   = 1.51
             steps_muqcd  = 100.0
             steps_top    = 50.0
         elif "2s" in reg:
-            intial_muqcd = 0.025
-            intial_top   = 1.3
+            intial_muqcd = 0.037
+            intial_top   = 1.4
         elif "2" in reg:
             intial_muqcd = 0.032
             intial_top   = 3.1
@@ -483,7 +483,11 @@ def NegLogL(npar, gin, f, par, ifag):
             Nbins = data_r.GetNbinsX()
             #add the distribution in, with the same region normalization
             for ibin in range(1,Nbins+1):
-                expected_i = muqcd * qcd_r.GetBinContent(ibin) + muttbar * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
+                if Fitzjets:
+                    expected_i = muqcd * qcd_r.GetBinContent(ibin) + muttbar * top_r.GetBinContent(ibin) + zjet_r.GetBinContent(ibin)
+                else:
+                    expected_i = muqcd * qcd_r.GetBinContent(ibin) + muttbar * top_r.GetBinContent(ibin)
+                    
                 if scaleTop_model:
                     expected_i = expected_i + (muqcd * (1.0 - muttbar) * top_model_r.GetBinContent(ibin))
                     # use (1.0 - muttbar) since top_model is already subtracted from data to make qcd
@@ -510,15 +514,15 @@ def WriteFitResult(inputdic, outFile, nfit=3):
         outstr = ""
         outstr += cut.replace("i", "SB, Nb=")
         outstr += " & "
-        outstr += str(round_sig(inputdic["muqcd"][i], 2))
+        outstr += str(round_sig(inputdic["muqcd"][i], 3))
         outstr += " $\\pm$ "
-        outstr += str(round_sig(inputdic["muqcd_e"][i], 2))
+        outstr += str(round_sig(inputdic["muqcd_e"][i], 3))
         outstr += " & "
-        outstr += str(round_sig(inputdic["muttbar"][i], 2))
+        outstr += str(round_sig(inputdic["muttbar"][i], 3))
         outstr += " $\\pm$ "
-        outstr += str(round_sig(inputdic["muttbar_e"][i], 2))
+        outstr += str(round_sig(inputdic["muttbar_e"][i], 3))
         outstr += " & "
-        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], 2))
+        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], 3))
         outstr+="\\\\"
         tableList.append(outstr)
 

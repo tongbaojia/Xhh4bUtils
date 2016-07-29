@@ -17,8 +17,8 @@ func2 = None
 # rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
 # nbtag_top_shape_normFit --- what top shape to be used in NORMALIZATION FIT?
 # nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
-def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis/Output/b77/data_test/hist-MiniNTuple.root",
-                  topfileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis/Output/b77/ttbar_comb_test/hist-MiniNTuple.root",
+def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/ICHEPAnalysis/Output/b77/data_test/hist-MiniNTuple.root",
+                  topfileName="/afs/cern.ch/user/b/btong/work/bbbb/ICHEPAnalysis/Output/b77/ttbar_comb_test/hist-MiniNTuple.root",
                   zjetfileName=None,
                   distributionName= "mHH_l",
                   n_trkjet  = ["4","3","2"],
@@ -36,7 +36,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                   inputQCDSyst_Dict = None,
                   doSmoothing = True,
                   addSmoothErrorBin = False,
-                  qcdSmoothRange = (1100, 3000), #(1200, 3000),
+                  qcdSmoothRange = (1200, 3000), #(1200, 3000),
                   topSmoothRange = (1100, 3000), #(1200, 3000),
                   isSystematicVariation = False,
                   verbose = False,
@@ -101,7 +101,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                                               n_trkjet  = n_trkjet,
                                               n_btag    = n_btag,
                                               btag_WP   = btag_WP,
-                                              NRebin    = 2,#NRebin,
+                                              NRebin    = 1,#NRebin, #this is reset to be fine binned
                                               use_one_top_nuis = use_one_top_nuis,
                                               use_scale_top_0b = use_scale_top_0b,
                                               nbtag_top_shape_for4b = nbtag_top_shape_normFit_for4b,
@@ -129,9 +129,9 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                                         btag_WP     = btag_WP,
                                         mu_qcd_vals = bkgFitResults["muqcd"],
                                         topscale_vals = bkgFitResults["topscale"],
-                                        NRebin = 5,
+                                        NRebin = 5, #this used to be 5, incease to 10 just like SR
                                         smoothing_func = smoothing_func,
-                                        SmoothRange = (1100, 3000),# (100, 2500),
+                                        SmoothRange = (1100, 3000),# (100, 2500), #this is fixed...
                                         use_one_top_nuis = use_one_top_nuis,
                                         use_scale_top_0b = use_scale_top_0b,
                                         nbtag_top_shape_for4b = nbtag_top_shape_SRPred_for4b,
@@ -324,7 +324,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
                                                                      makePlots = True, verbose = False, outfileName="EMGSmoothFuncCompare_"+r+".root", plotExtra=False)  # Qi
             else:
                 # smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (900, qcdSmoothRange[1]),
-                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = (qcdSmoothRange[0], qcdSmoothRange[1]),            # qi
+                smoothFuncCompSyst = smoothfit.smoothFuncCompare(qcd_r, fitRange = qcdSmoothRange,            # qi
                                                                  makePlots = True, verbose = False, outfileName="smoothFuncCompare_"+r+".root", plotExtra=False)  # Qi
                 
             qcd_r_func_up = smoothFuncCompSyst["up"]
@@ -359,7 +359,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/CHEPAnalysis
             output_Dict[r]["qcd"]["smoothFuncup_super"] = qcd_r_func_up_super
             output_Dict[r]["qcd"]["smoothFuncdown_super"] = qcd_r_func_dw_super
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750", "2000","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1200","1500"],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750","2000","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1400","1500"],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################

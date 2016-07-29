@@ -30,7 +30,7 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
         npar = 3
         fitChoice = DijetFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(-2, 20, -4)
+        func.SetParameters(1, 35, -5)
 
     elif fitFunction == "MJ2":
         npar = 3
@@ -105,10 +105,10 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
 
     if fitResult.Status() != 0:
         print "Error in smoothing fit: did not terminate properly. Exiting"
-        c=R.TCanvas()
+        c_temp=R.TCanvas()
         #R.SetOwnership(c,False)
         histo.Draw()
-        c.SaveAs("failed__"+outfileName)
+        c_temp.SaveAs("failed__"+outfileName)
         sys.exit(0)
             
     
@@ -164,6 +164,8 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
         #R.SetOwnership(c,False)
         leg = R.TLegend(0.1,0.7,0.48,0.9)
         leg.SetFillColor(0)
+        leg.SetBorderSize(0)
+        leg.SetMargin(0.3)
         leg.AddEntry(histo, "Distribution", "LP")
         leg.AddEntry(drawFunc, "Fit", "L")
 
@@ -223,21 +225,23 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
 
     h_clone = histo.Clone()
     h_clone.GetXaxis().SetRangeUser(500, 3000)
-    h_clone.GetYaxis().SetRangeUser(1e-3, 1e2)
+    h_clone.GetYaxis().SetRangeUser(1e-2, 1e4)
     h_clone.SetDirectory(0)
     
     results = {}
     results_hist = {}
     results_hist_ud = {}
-
+    
     for theFunc in funclist:
         curr_result = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
         if curr_result["prob"] <  minProb:
             funclist_pass[theFunc] = False
+            print "failed prob", h_clone.GetName(), theFunc
             continue
 
         if integralMaxRatio is not None and not PassIntegralCondition(h_clone, curr_result["nom"], integralMaxRatio):
             funclist_pass[theFunc] = False
+            print "failed norm", h_clone.GetName(), theFunc
             continue
         
         funclist_pass[theFunc] = True
@@ -252,7 +256,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             results_hist_ud[theFunc]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][1])
 
 
-
+    #print results_hist
     histo_up = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_up")
     histo_up.SetDirectory(0)
     histo_dw = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_dw")
@@ -291,14 +295,22 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
     if makePlots:
         f = R.TFile(outfileName, "RECREATE")
         
-        c=R.TCanvas("c1","c1")
+        c=R.TCanvas("c1_func","c1_func")
         #R.SetOwnership(c,False)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
-        leg.SetFillColor(0)
+        leg1 = R.TLegend(0.6,0.6,0.9,0.9)
+        leg1.SetFillColor(0)
+        leg1.SetBorderSize(0)
+        leg1.SetMargin(0.3)
+
+        leg2 = R.TLegend(0.3,0.6,0.65,0.9)
+        leg2.SetFillColor(0)
+        leg2.SetBorderSize(0)
+        leg2.SetMargin(0.3)
     
         h_clone.SetLineColor(R.kBlack)
         h_clone.Draw()
-        leg.AddEntry(histo, "Histogram", "L")
+        leg1.AddEntry(histo, "Histogram", "L")
+        leg2.AddEntry(histo, "Histogram", "P")
 
         icol = 0
         ivar0 = True
@@ -325,11 +337,12 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
                 err_hist_ratio.Divide( results[theFunc]["nom"] )
 
 
-
                 err_hist.SetFillColor(R.kBlack)
+                err_hist.SetMarkerSize(0)
                 err_hist.SetFillStyle(3001)
                 err_hist.Draw("sameE3")
-                leg.AddEntry(err_hist, "smoothing error", "F")
+                leg1.AddEntry(err_hist, "smoothing error", "F")
+                leg2.AddEntry(err_hist, "smoothing error", "F")
 
 
 
@@ -337,7 +350,8 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
 
             results[theFunc]["nom"].SetLineColor( colorlist[icol] )
             results[theFunc]["nom"].Draw("same")
-            leg.AddEntry(results[theFunc]["nom"], theFunc, "L")
+            leg1.AddEntry(results[theFunc]["nom"], theFunc, "L")
+            leg2.AddEntry(results[theFunc]["nom"], theFunc, "L")
 
 
             if plotExtra:
@@ -353,19 +367,20 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             
         if plotExtra:
             results_hist_ud["MJ2"]["up0"].SetLineColor( R.kGray+2 )
-            leg.AddEntry(results_hist_ud["MJ2"]["up0"], "Param Variations", "L")
-        leg.Draw()
+            leg1.AddEntry(results_hist_ud["MJ2"]["up0"], "Param Variations", "L")
+            leg2.AddEntry(results_hist_ud["MJ2"]["up0"], "Param Variations", "L")
+        leg1.Draw()
         
 
 
-        c2=R.TCanvas("c2","c2")
+        c2=R.TCanvas("c2_func","c2_func")
         #R.SetOwnership(c,False)
         print "err_hist_ratio",err_hist_ratio
         err_hist_ratio.SetFillColor(R.kBlack)
         err_hist_ratio.SetFillStyle(3004)
         err_hist_ratio.SetMarkerSize(0)
         err_hist_ratio.GetXaxis().SetRangeUser(1000, 3000)
-        err_hist_ratio.GetYaxis().SetRangeUser(0, 2)
+        err_hist_ratio.GetYaxis().SetRangeUser(0.4, 2)
         err_hist_ratio.GetXaxis().SetLabelSize(0.04)
         err_hist_ratio.GetYaxis().SetLabelSize(0.04)
         err_hist_ratio.Draw("E2")
@@ -373,8 +388,8 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
         icol = 0
         f_ratio = {}
 
-
         delta_ratio_super = {}
+        h_ratio_lst  = []
         for theFunc in funclist:
             if funclist_pass[theFunc] == False:
                 continue
@@ -383,13 +398,12 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
             ## f_copy = f_ratio[theFunc].DrawCopy("same")
-
-            h_ratio  = results[theFunc]["nom"].GetHistogram()
-            h_ratio.Divide( results[fitFunction]["nom"] )
-            h_ratio.SetDirectory(0)
-
-            h_ratio.SetLineColor( colorlist[icol] )
-            h_ratio.Draw("same")
+            h_ratio_lst.append(results[theFunc]["nom"].GetHistogram().Clone())
+            h_ratio_lst[-1].SetName("err_hist_ratio__" + theFunc + "_copy")
+            h_ratio_lst[-1].SetDirectory(0)
+            h_ratio_lst[-1].Divide( results[fitFunction]["nom"] )
+            h_ratio_lst[-1].SetLineColor( colorlist[icol] )
+            h_ratio_lst[-1].Draw("hist same")
 
             if plotExtra:
                 for ivar in range(len(results[theFunc]["vars"])):
@@ -413,7 +427,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             #print f_copy, f_ratio[theFunc], f_ratio[theFunc].Eval(1000), f_ratio[theFunc].Eval(2000), f_ratio[theFunc].Eval(3000)
             icol += 1
 
-        leg.Draw()
+        leg2.Draw()
         #for drs in delta_ratio_super:
         #    print drs, delta_ratio_super[drs]
 
@@ -421,6 +435,11 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
 
         f.WriteTObject(c)
         f.WriteTObject(c2)
+
+        c.SaveAs(outfileName.split(".root")[0] + "_comp" + ".pdf")
+        c2.SaveAs(outfileName.split(".root")[0] + "_comp" + "_ratio.pdf")
+        c.Close()
+        c2.Close()
         f.Close()
         
     return smoothFuncCompSyst
@@ -510,23 +529,25 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         histo_dw_super.SetBinContent(ibin, histo_dw.GetBinContent(ibin) - theDelta_super)
 
     smoothFuncCompSyst = {"up":histo_up, "dw":histo_dw, "up_super":histo_up_super, "dw_super":histo_dw_super}
-        
-        
 
     if makePlots:
         f = R.TFile(outfileName, "RECREATE")
         
-        c=R.TCanvas("c1","c1")
+        c=R.TCanvas("c1_range","c1_range")
         #R.SetOwnership(c,False)
-        leg1 = R.TLegend(0.5,0.5,0.8,0.8)
+        leg1 = R.TLegend(0.6,0.6,0.9,0.9)
         leg1.SetFillColor(0)
+        leg1.SetBorderSize(0)
+        leg1.SetMargin(0.3)
 
-        leg2 = R.TLegend(0.1,0.65,0.45,0.9)
+        leg2 = R.TLegend(0.3,0.6,0.65,0.9)
         leg2.SetFillColor(0)
+        leg2.SetBorderSize(0)
+        leg2.SetMargin(0.3)
     
         h_clone.SetLineColor(R.kBlack)
         h_clone.GetXaxis().SetRangeUser(500,3000)
-        h_clone.GetYaxis().SetRangeUser(1e-3,1e2)
+        h_clone.GetYaxis().SetRangeUser(1e-2,1e4)
         h_clone.SetTitle("")
         h_clone.Draw()
         
@@ -556,9 +577,8 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
                 err_hist_ratio.SetDirectory(0)
                 err_hist_ratio.Divide( results[fpair]["nom"] )
 
-
-
                 err_hist.SetFillColor(R.kBlack)
+                err_hist.SetMarkerSize(0)
                 err_hist.SetFillStyle(3001)
                 err_hist.Draw("sameE3")
 
@@ -592,14 +612,15 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         leg1.Draw()
         c.SetLogy(1)
 
-        c2=R.TCanvas("c2","c2")
+        c2=R.TCanvas("c2_range","c2_range")
+        c2.cd()
         #R.SetOwnership(c,False)
         print "err_hist_ratio",err_hist_ratio
         err_hist_ratio.SetFillColor(R.kBlack)
         err_hist_ratio.SetFillStyle(3004)
         err_hist_ratio.SetMarkerSize(0)
         err_hist_ratio.GetXaxis().SetRangeUser(1000, 3000)
-        err_hist_ratio.GetYaxis().SetRangeUser(0, 2)
+        err_hist_ratio.GetYaxis().SetRangeUser(0.4, 2)
         err_hist_ratio.GetXaxis().SetLabelSize(0.04)
         err_hist_ratio.GetYaxis().SetLabelSize(0.04)
         err_hist_ratio.SetTitle("")
@@ -609,6 +630,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
         f_ratio = {}
 
         delta_ratio_super = {}
+        h_ratio_lst  = []
         for fpair in fitPairs:
             if fitPairs_pass[fpair] == False:
                 continue
@@ -617,13 +639,12 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
             ## f_ratio[theFunc] = R.TF1(theFunc+"_ratio_"+namestr, func_ratio[theFunc], fitRange[0], 3000, 0)
             ## f_ratio[theFunc].SetLineColor( colorlist[icol] )
             ## f_copy = f_ratio[theFunc].DrawCopy("same")
-
-            h_ratio  = results[fpair]["nom"].GetHistogram()
-            h_ratio.Divide( results[strNom]["nom"] )
-            h_ratio.SetDirectory(0)
-
-            h_ratio.SetLineColor( colorlist[icol] )
-            h_ratio.Draw("hist same")
+            h_ratio_lst.append(results[fpair]["nom"].GetHistogram().Clone())
+            h_ratio_lst[-1].SetName("err_hist_ratio__" + fpair + "_copy")
+            h_ratio_lst[-1].SetDirectory(0)
+            h_ratio_lst[-1].Divide( results[strNom]["nom"] )
+            h_ratio_lst[-1].SetLineColor( colorlist[icol] )
+            h_ratio_lst[-1].Draw("hist same")
 
             if plotExtra:
                 for ivar in range(len(results[fpair]["vars"])):
@@ -644,7 +665,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
 
                     delta_ratio_super[fpair+"_"+str(ivar)+"_dw"] = h_ratio_ud.GetBinContent( h_ratio_ud.FindBin(3000) )
             
-            #print f_copy, f_ratio[theFunc], f_ratio[theFunc].Eval(1000), f_ratio[theFunc].Eval(2000), f_ratio[theFunc].Eval(3000)
+            #print h_ratio, h_ratio.Eval(1000), h_ratio.Eval(2000), h_ratio.Eval(3000)
             icol += 1
 
         leg2.Draw()
@@ -653,8 +674,12 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
             for drs in delta_ratio_super:
                 print drs, delta_ratio_super[drs]
 
+        c.SaveAs(outfileName.split(".root")[0] + "_comp" + ".pdf")
+        c2.SaveAs(outfileName.split(".root")[0] + "_comp" + "_ratio.pdf")
         f.WriteTObject(c)
         f.WriteTObject(c2)
+        c.Close()
+        c2.Close()
         f.Close()
         
     return smoothFuncCompSyst

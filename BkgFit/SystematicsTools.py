@@ -237,6 +237,7 @@ def QCDSystematics(datafileName="hist_data.root",
             fdw.Draw("same")
             leg.Draw("same")
             c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
+            c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".pdf")
 
 
     datafile.Close()

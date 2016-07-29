@@ -17,9 +17,9 @@ def rfunc_ratio(x):
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-     "44": 0.18,
-     "33": 0.09,
-     "22": 0.04
+     "44": 0.20,
+     "33": 0.05,
+     "22": 0.05
 }
 
 
@@ -235,6 +235,7 @@ def QCDSystematics(datafileName="hist_data.root",
         leg.Draw("same")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".pdf")
+        c.Close()
 
 
         h_ratio_cr_nom = data_sm_h.Clone("data_sm_h_CRsyst_"+r)
@@ -256,13 +257,13 @@ def QCDSystematics(datafileName="hist_data.root",
         
         
         c2=R.TCanvas("c2_cr_"+r,"c2_cr_"+r)
-        leg = R.TLegend(0.1,0.7,0.48,0.9)
+        leg = R.TLegend(0.2,0.7,0.5,0.9)
         leg.SetFillColor(0)
         h_ratio_cr_nom.SetFillColor(R.kBlack)
         h_ratio_cr_nom.SetFillStyle(3004)
         h_ratio_cr_nom.SetMarkerSize(0)
         h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
-        h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
+        h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 3)
         h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.SetXTitle("m_{JJ} [GeV]")
@@ -280,7 +281,7 @@ def QCDSystematics(datafileName="hist_data.root",
         leg.Draw("same")
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".root")
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".pdf")
-
+        c2.Close()
 
 
     datafile.Close()
@@ -398,6 +399,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     leg.Draw("same")
     c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".root")
     c.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region + ".pdf")
+    c.Close()
 
 
     h_ratio_cr_nom = top_comp_sm_h.Clone("top_comp_sm_h_TopShape4b")
@@ -413,13 +415,13 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
         
         
     c2=R.TCanvas("c2_topsys","c2_topsys")
-    leg = R.TLegend(0.1,0.7,0.48,0.9)
+    leg = R.TLegend(0.2,0.7,0.5,0.9)
     leg.SetFillColor(0)
     h_ratio_cr_nom.SetFillColor(R.kBlack)
     h_ratio_cr_nom.SetFillStyle(3004)
     h_ratio_cr_nom.SetMarkerSize(0)
     h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
-    h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 10)
+    h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 3)
     h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
     h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
     h_ratio_cr_nom.SetXTitle("m_{JJ} [GeV]")
@@ -438,7 +440,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     leg.Draw("same")
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.root")
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.pdf")
-
+    c2.Close()
 
 
     topfile.Close()
