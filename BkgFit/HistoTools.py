@@ -5,24 +5,27 @@ def HistLocationString(distName="DiJetMass", ntrackjet = "4", nbtag="4", btagWP=
     if whichFunc == "SLAC":
         output = "GoodEvent_Pass" + ntrackjet + "GoodTrackJetPass" + nbtag + "b" + btagWP +"Pass"+massRegion+"Mass/"+distName
         #folder = lambda nt, nb, wp: "GoodEvent_Pass" + nt + "GoodTrackJetPass" + nb + "b" + wp +"PassSRMass/"
+    
+    #this is the setting!!!
     elif whichFunc == "XhhBoosted":
         word_dict = {"4": "FourTag", "3" : "ThreeTag", "2" : \
         "TwoTag", "2s" : "TwoTag_split", "1": "OneTag", "0": "NoTag"}
-        bkg_dict = {"2" : "2Trk_split", "3" : "3Trk", "4" : "4Trk"}
-        if (ntrackjet == "i"):
-          output = word_dict[nbtag] + "_" + massRegion + "/" + distName
+        bkg_dict = {"0":"", "1":"", "2" : "_2Trk_split_", "3" : "_3Trk_", "4" : "_4Trk_"} ##if put in specific numbers, then 
+        if (ntrackjet != "i") and (nbtag == "s"): #this is for the specific bcg modelingl without "i"; will look for NoTag_blah, thus "s"
+          output = word_dict["0"] + bkg_dict[ntrackjet] + massRegion + "/" + distName
         else:
-          output = word_dict[nbtag] + "_" + bkg_dict[ntrackjet] + "_" + massRegion + "/" + distName
+          output = word_dict[nbtag] + "_" + massRegion + "/" + distName
 
+    #this is not my setting!
     elif whichFunc =="2016":
-        tag_dict = {"4": "Four", "3" : "Three", "2" : "Two", "1":"One","0":"No"}
+        tag_dict = {"4": "Four", "3" : "Three", "2" : "Two", "1":"One", "0":"No"}
         reg_dict = {"SB":"Sideband", "CR":"Control", "SR":"Signal"}
-        if nbtag == "3" or nbtag == "4":
+        if nbtag == "3" or nbtag == "4" or nbtag == "1" :
             output = tag_dict[nbtag] + "Tag_" +  reg_dict[massRegion] + "/" + distName
         elif nbtag == "2":
             output = tag_dict[nbtag] + "Tag_split_" +  reg_dict[massRegion] + "/" + distName
         elif nbtag == "0":
-            output = tag_dict[nbtag] + "Tag_" + ntrackjet + "Trk_"+ ("split_" if ntrackjet=="2" else "")+ reg_dict[massRegion] + "/" + distName
+            output = tag_dict[nbtag] + "Tag_" + ntrackjet + "Trk_"+ ("split_" if ntrackjet=="2" else "") + reg_dict[massRegion] + "/" + distName
 
     return output
 

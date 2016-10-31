@@ -27,10 +27,10 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   zjetfileName        ="hist_Zjets.root",
                   distributionName    = ["LeadCaloJetM"],
                   n_trkjet            = ["4", "3", "2", "1"],
-                  n_btag              = ["4", "3", "2s"], #["4", "3", "2s", "2", "1"],
+                  n_btag              = ["4", "3", "2s", "2", "1"], #["4", "3", "2s", "2", "1"],
                   btag_WP             = "77", #not useful for Xhh Framework
                   NRebin              = 1,
-                  BKG_model           = 0, #define the bkg models
+                  BKG_model           = "s", #define the bkg models
                   use_one_top_nuis    = False, #True to fix one top parameter
                   use_scale_top_model = False,
                   nbtag_top_shape     = True, #fix 4b and 3b shape to be the same
@@ -50,6 +50,9 @@ def BackgroundFit(datafileName        ="hist_data.root",
     global regions
     global Output
     global Fitzjets
+    global Bkg_model
+
+    print BKG_model, " is the background model!"
     ################### Parse  #########################
     # num_trkjet  = np.asarray(n_trkjet)
     # if num_trkjet.shape==():
@@ -67,6 +70,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
     scaleTop_model = use_scale_top_model
     dist_name = distributionName
     Fitzjets  = fitzjets
+    Bkg_model = BKG_model
     ########################################################
     #setup regions to fit
     regions = [ "i" + n_btag[i] for i in range(len(n_btag)) ]
@@ -102,7 +106,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
         zjet_r = {}
         for h in dist_name:
             hist_fullpath = HistLocStr(h, r[0], r[1:], btag_WP, "Sideband", whichFunc)  #folder( r[0], r[1], btag_WP)
-            #print hist_fullpath
+            #print r, hist_fullpath
             data_r[h] = datafile.Get(hist_fullpath).Clone("data_"+r+h)
             top_r[h]  = topfile.Get(hist_fullpath).Clone("top_"+r+h)
             zjet_r[h] = CheckAndGet(zjetfile, hist_fullpath, top_r).Clone("zjet_"+r+h)
@@ -135,7 +139,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
             hz = histos[r]["zjet"][h].Clone("h_zjet_"+r+h)
 
             #start background modeling
-            bkg_model = r[0]+str(BKG_model)
+            bkg_model = r[0] + (str(BKG_model) if isinstance(BKG_model, int) else "0")
             if r[1:] == "2s":
                 bkg_model = "2"+str(BKG_model)
             elif r[1:] == "3":
@@ -339,7 +343,7 @@ def MakePlot(region, muqcd, muttbar):
         c.Write()
         if not os.path.exists(Output + "Fit"):
             os.makedirs(Output + "Fit")
-        c.SaveAs(Output + "Fit/" + "fitNorm_"+region+"_"+h+".pdf")
+        c.SaveAs(Output + "Fit/" + "fitNorm_" + region + "_" + h + "_" + str(Bkg_model) + ".pdf")
         c.Close()
         del(h_data2)
         del(h_top2)
@@ -433,24 +437,24 @@ def ClearMinuit( minuit ):
         steps_muqcd  = 50.0
         #needs to trick the fit to offset it a bit?
         if "4" in reg:
-            intial_muqcd = 0.00093
+            intial_muqcd = 0.0008
             intial_top   = 2.0
             steps_muqcd  = 200.0
             steps_top    = 200.0
         elif "3" in reg:
-            intial_muqcd = 0.0085
+            intial_muqcd = 0.015 #0.0085
             intial_top   = 1.51
             steps_muqcd  = 100.0
             steps_top    = 50.0
         elif "2s" in reg:
-            intial_muqcd = 0.037
+            intial_muqcd = 0.09 #0.037
             intial_top   = 1.4
         elif "2" in reg:
-            intial_muqcd = 0.032
-            intial_top   = 3.1
+            intial_muqcd = 0.04 #0.04
+            intial_top   = 3.0
         elif "1" in reg:
-            intial_muqcd = 0.28
-            intial_top   = 2.9
+            intial_muqcd = 0.36 #0.36
+            intial_top   = 2.0
         #DefineParameter(parNo, name, initVal, initSTEP!, lowerLimit, upperLimit)
         minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.000001, 100)
         if useOneTopNuis and i!=0:
@@ -518,11 +522,11 @@ def WriteFitResult(inputdic, outFile, nfit=3):
         outstr += " $\\pm$ "
         outstr += str(round_sig(inputdic["muqcd_e"][i], 3))
         outstr += " & "
-        outstr += str(round_sig(inputdic["muttbar"][i], 3))
+        outstr += str(round_sig(inputdic["muttbar"][i], 3)) if not useOneTopNuis else str(round_sig(inputdic["muttbar"][0], 3))
         outstr += " $\\pm$ "
-        outstr += str(round_sig(inputdic["muttbar_e"][i], 3))
+        outstr += str(round_sig(inputdic["muttbar_e"][i], 3)) if not useOneTopNuis else str(round_sig(inputdic["muttbar"][0], 3))
         outstr += " & "
-        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], 3))
+        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], 3)) if not useOneTopNuis else str(round_sig(inputdic["corr_m"][i][-1], 3))
         outstr+="\\\\"
         tableList.append(outstr)
 
