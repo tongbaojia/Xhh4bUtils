@@ -27,10 +27,12 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   zjetfileName        ="hist_Zjets.root",
                   distributionName    = ["LeadCaloJetM"],
                   n_trkjet            = ["4", "3", "2", "1"],
-                  n_btag              = ["4", "3", "2s", "2", "1"], #["4", "3", "2s", "2", "1"],
+                  n_btag              = ["4", "3", "2s"],#"2", "1"], #["4", "3", "2s", "2", "1"],
                   btag_WP             = "77", #not useful for Xhh Framework
                   NRebin              = 1,
                   BKG_model           = "s", #define the bkg models
+                  BKG_lst             = [], #baseline fits
+                  BKG_dic             = {}, #baseline background estimations
                   use_one_top_nuis    = False, #True to fix one top parameter
                   use_scale_top_model = False,
                   nbtag_top_shape     = True, #fix 4b and 3b shape to be the same
@@ -73,7 +75,10 @@ def BackgroundFit(datafileName        ="hist_data.root",
     Bkg_model = BKG_model
     ########################################################
     #setup regions to fit
-    regions = [ "i" + n_btag[i] for i in range(len(n_btag)) ]
+    #regions = [ "i" + n_btag[i] for i in range(len(n_btag)) ]
+    #print BKG_dic
+    regions = BKG_lst[:]
+    #print regions
     #print regions
     ########################################################
     #load the histogram files
@@ -92,12 +97,16 @@ def BackgroundFit(datafileName        ="hist_data.root",
     ################### Get Histograms  ###################
     histos = { }
     # collect all histograms; ntrkjets, nbtags
-    hist_region_lst = ["i" + x for x in n_btag]
+    #hist_region_lst = ["i" + x for x in n_btag]
+    hist_region_lst = BKG_lst[:] #stupid way of copying yet doesn't change the original value
+    hist_region_lst += [BKG_dic[i] for i in BKG_lst]
+    print "list of hists and fits:", hist_region_lst
+    #hist_region_lst = ["i" + x for x in n_btag]
     #load the specific trackjet regions
-    hist_region_lst.append("i0")
-    hist_region_lst.append("2" + str(BKG_model))
-    hist_region_lst.append("3" + str(BKG_model))
-    hist_region_lst.append("4" + str(BKG_model))
+    # hist_region_lst.append("i0")
+    # hist_region_lst.append("2" + str(BKG_model))
+    # hist_region_lst.append("3" + str(BKG_model))
+    # hist_region_lst.append("4" + str(BKG_model))
     #print hist_region_lst
     #load the histograms
     for r in hist_region_lst:
@@ -105,7 +114,8 @@ def BackgroundFit(datafileName        ="hist_data.root",
         top_r = {}
         zjet_r = {}
         for h in dist_name:
-            hist_fullpath = HistLocStr(h, r[0], r[1:], btag_WP, "Sideband", whichFunc)  #folder( r[0], r[1], btag_WP)
+            #print r
+            hist_fullpath = HistLocStr(h, massRegion="Sideband", whichFunc=whichFunc, folderName=r)  #folder( r[0], r[1], btag_WP)
             #print r, hist_fullpath
             data_r[h] = datafile.Get(hist_fullpath).Clone("data_"+r+h)
             top_r[h]  = topfile.Get(hist_fullpath).Clone("top_"+r+h)
@@ -131,21 +141,22 @@ def BackgroundFit(datafileName        ="hist_data.root",
             if nbtag_top_shape != None:
                 ht = histos[r]["top"][h].Clone("h_top_"+r+h)
                 #change for top selection, from 4b to 3b
-                if r[1:] == "4":
-                    ht = histos[r[0] + "3"]["top"][h].Clone("h_top_"+r+h)
+                if r == "FourTag":
+                    ht = histos["ThreeTag"]["top"][h].Clone("h_top_"+r+h)
                 ht.Scale( histos[r]["top"][h].Integral() / ht.Integral() ) #scale to correct norm for region
             else:
                 ht = histos[r]["top"][h].Clone("h_top_"+r+h)
             hz = histos[r]["zjet"][h].Clone("h_zjet_"+r+h)
 
             #start background modeling
-            bkg_model = r[0] + (str(BKG_model) if isinstance(BKG_model, int) else "0")
-            if r[1:] == "2s":
-                bkg_model = "2"+str(BKG_model)
-            elif r[1:] == "3":
-                bkg_model = "3"+str(BKG_model)
-            elif r[1:] == "4":
-                bkg_model = "4"+str(BKG_model)
+            #print regions
+            bkg_model = BKG_dic[r]
+            # if r[1:] == "2s":
+            #     bkg_model = "2"+str(BKG_model)
+            # elif r[1:] == "3":
+            #     bkg_model = "3"+str(BKG_model)
+            # elif r[1:] == "4":
+            #     bkg_model = "4"+str(BKG_model)
             #bkg_model = "42"
             #load the histograms
             hq = histos[bkg_model]["data"][h].Clone("h_qcd_"+r+h) #use 0 tag to fit now
@@ -383,7 +394,6 @@ def Fit( minuit ):
     muttbar_e_up = [R.Double(0)] * (1 if useOneTopNuis else n_reg)
     muttbar_e_dw = [R.Double(0)] * (1 if useOneTopNuis else n_reg)
 
-
     for i in range(n_reg):
         minuit.GetParameter( i, tmp1, tmp2  )
         muqcd[i]   = deepcopy(tmp1)
@@ -435,33 +445,36 @@ def ClearMinuit( minuit ):
         intial_top   = 1.2
         steps_top    = 20.0
         steps_muqcd  = 50.0
+        #print reg
         #needs to trick the fit to offset it a bit?
-        if "4" in reg:
-            intial_muqcd = 0.0008
-            intial_top   = 2.0
+        if "FourTag" in reg:
+            intial_muqcd = 0.008
+            intial_top   = 1.0
             steps_muqcd  = 200.0
             steps_top    = 200.0
-        elif "3" in reg:
-            intial_muqcd = 0.015 #0.0085
-            intial_top   = 1.51
-            steps_muqcd  = 100.0
-            steps_top    = 50.0
-        elif "2s" in reg:
-            intial_muqcd = 0.09 #0.037
-            intial_top   = 1.4
-        elif "2" in reg:
-            intial_muqcd = 0.04 #0.04
-            intial_top   = 3.0
-        elif "1" in reg:
-            intial_muqcd = 0.36 #0.36
+        elif "ThreeTag" in reg:
+            intial_muqcd = 0.0085 #0.0085
+            intial_top   = 1.0
+            steps_muqcd  = 200.0
+            steps_top    = 200.0
+        elif "TwoTag_split" in reg:
+            intial_muqcd = 0.06 #0.037; or if fails, 0.006
+            intial_top   = 1.0
+            steps_muqcd  = 200.0
+            steps_top    = 200.0
+        elif "TwoTag" in reg:
+            intial_muqcd = 0.05 #0.04
             intial_top   = 2.0
+        elif "OneTag" in reg:
+            intial_muqcd = 0.36 #0.36
+            intial_top   = 1.5
         #DefineParameter(parNo, name, initVal, initSTEP!, lowerLimit, upperLimit)
-        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.000001, 100)
+        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.0000001, 100)
         if useOneTopNuis and i!=0:
             continue
         muttbarName = "muttbar"+("_"+regions[i] if not useOneTopNuis else '')
         # minuit.DefineParameter(i+len(regions), muttbarName, 1.3, 0.01, 0.00001, 5)
-        minuit.DefineParameter(i+len(regions), muttbarName, intial_top, intial_top * 1/steps_top, 0.0001, 200)
+        minuit.DefineParameter(i + len(regions), muttbarName, intial_top, intial_top * 1/steps_top, 0.0001, 200)
     return
     
 
@@ -516,7 +529,7 @@ def WriteFitResult(inputdic, outFile, nfit=3):
     for i, cut in enumerate(regions):
     #get the mass plot
         outstr = ""
-        outstr += cut.replace("i", "SB, Nb=")
+        outstr += cut.replace("_", " ")
         outstr += " & "
         outstr += str(round_sig(inputdic["muqcd"][i], 3))
         outstr += " $\\pm$ "
