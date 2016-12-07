@@ -33,6 +33,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   BKG_model           = "s", #define the bkg models
                   BKG_lst             = [], #baseline fits
                   BKG_dic             = {}, #baseline background estimations
+                  Weight_dic          = {}, #baseline rescale keys
                   use_one_top_nuis    = False, #True to fix one top parameter
                   use_scale_top_model = False,
                   nbtag_top_shape     = True, #fix 4b and 3b shape to be the same
@@ -100,6 +101,12 @@ def BackgroundFit(datafileName        ="hist_data.root",
     #hist_region_lst = ["i" + x for x in n_btag]
     hist_region_lst = BKG_lst[:] #stupid way of copying yet doesn't change the original value
     hist_region_lst += [BKG_dic[i] for i in BKG_lst]
+    for bkg in BKG_lst:
+        if bkg in Weight_dic.keys():
+            if Weight_dic[bkg][0] not in hist_region_lst:
+                hist_region_lst += [Weight_dic[bkg][0]]
+            if Weight_dic[bkg][1] not in hist_region_lst:
+                hist_region_lst += [Weight_dic[bkg][1]]
     print "list of hists and fits:", hist_region_lst
     #hist_region_lst = ["i" + x for x in n_btag]
     #load the specific trackjet regions
@@ -159,13 +166,34 @@ def BackgroundFit(datafileName        ="hist_data.root",
             #     bkg_model = "4"+str(BKG_model)
             #bkg_model = "42"
             #load the histograms
-            hq = histos[bkg_model]["data"][h].Clone("h_qcd_"+r+h) #use 0 tag to fit now
-            ht2 = histos[bkg_model]["top"][h].Clone("h_top_model_"+r+h) #use 0 tag to fit now
+            hq = histos[bkg_model]["data"][h].Clone("h_qcd_"+r+h)
+            ht2 = histos[bkg_model]["top"][h].Clone("h_top_model_"+r+h)
             hz2 = histos[bkg_model]["zjet"][h].Clone("h_zjet_"+r+h)
             #substract top and Zjet contributions from data       
             hq.Add( ht2, -1.0)
             if (Fitzjets):
                 hq.Add( hz2, -1.0) #do not substract z+jets
+            ##add an option to rescale the distribution here
+            if (r in Weight_dic.keys()):
+                hq_base = histos[Weight_dic[r][0]]["data"][h].Clone("h_qcd_"+r+h+"_base")
+                ht2_base = histos[Weight_dic[r][0]]["top"][h].Clone("h_top_"+r+h+"_base")
+                hz2_base = histos[Weight_dic[r][0]]["zjet"][h].Clone("h_zjet_"+r+h+"_base")
+                hq_base.Add( ht2_base, -1.0)
+                if (Fitzjets):
+                    hq_base.Add( hz2_base, -1.0) #do not substract z+jets
+                hq_model = histos[Weight_dic[r][1]]["data"][h].Clone("h_qcd_"+r+h+"_model")
+                ht2_model = histos[Weight_dic[r][1]]["top"][h].Clone("h_top_"+r+h+"_model")
+                hz2_model = histos[Weight_dic[r][1]]["zjet"][h].Clone("h_zjet_"+r+h+"_model")
+                hq_model.Add( ht2_model, -1.0)
+                if (Fitzjets):
+                    hq_model.Add( hz2_model, -1.0) #do not substract z+jets
+                #scale
+                hq_model.Scale(hq_base.Integral()/hq_model.Integral())
+                hq_model.Divide(hq_base)
+                hq.Multiply(hq_model)
+                print "reweight region:{:>12}: base:{:>12}: model:{:>12}:".format(r, Weight_dic[r][0], Weight_dic[r][1])
+
+            ClearNegBin(hq)
             #link the dictionaries, now as a dictionary again
             h_data[r][h] = hd #this is the data to fit
             h_qcd[r][h] = hq #this is the qcd fit
@@ -458,9 +486,9 @@ def ClearMinuit( minuit ):
             steps_muqcd  = 200.0
             steps_top    = 200.0
         elif "TwoTag_split" in reg:
-            intial_muqcd = 0.06 #0.037; or if fails, 0.006
+            intial_muqcd = 0.001 #0.037; or if fails, 0.001 or 0.06
             intial_top   = 1.0
-            steps_muqcd  = 200.0
+            steps_muqcd  = 100.0
             steps_top    = 200.0
         elif "TwoTag" in reg:
             intial_muqcd = 0.05 #0.04
@@ -562,6 +590,13 @@ def round_sig(x, sig=2):
         return round(x, sig)
     else:
         return round(x, sig-int(R.TMath.Log10(abs(x))))
+
+def ClearNegBin(hist):
+    for ibin in range(0, hist.GetNbinsX()+1):
+        if hist.GetBinContent(ibin) < 0:
+            hist.SetBinContent(ibin, 0)
+            hist.SetBinError(ibin, 0)
+    return
 
 if __name__=="__main__":
     BackgroundFit()
