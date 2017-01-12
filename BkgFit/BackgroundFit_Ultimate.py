@@ -476,20 +476,20 @@ def ClearMinuit( minuit ):
         #print reg
         #needs to trick the fit to offset it a bit?
         if "FourTag" in reg:
-            intial_muqcd = 0.008
-            intial_top   = 1.0
+            intial_muqcd = 0.003
+            intial_top   = 0.32
             steps_muqcd  = 200.0
-            steps_top    = 200.0
+            steps_top    = 50.0
         elif "ThreeTag" in reg:
-            intial_muqcd = 0.0085 #0.0085
+            intial_muqcd = 0.126 #0.0085
+            intial_top   = 1.2
+            steps_muqcd  = 200.0
+            steps_top    = 100.0
+        elif "TwoTag_split" in reg:
+            intial_muqcd = 0.04 #0.037; or if fails, 0.001 or 0.06
             intial_top   = 1.0
             steps_muqcd  = 200.0
-            steps_top    = 200.0
-        elif "TwoTag_split" in reg:
-            intial_muqcd = 0.001 #0.037; or if fails, 0.001 or 0.06
-            intial_top   = 1.0
-            steps_muqcd  = 100.0
-            steps_top    = 200.0
+            steps_top    = 100.0
         elif "TwoTag" in reg:
             intial_muqcd = 0.05 #0.04
             intial_top   = 2.0
@@ -497,12 +497,12 @@ def ClearMinuit( minuit ):
             intial_muqcd = 0.36 #0.36
             intial_top   = 1.5
         #DefineParameter(parNo, name, initVal, initSTEP!, lowerLimit, upperLimit)
-        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.0000001, 100)
+        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.0000001, 10)
         if useOneTopNuis and i!=0:
             continue
         muttbarName = "muttbar"+("_"+regions[i] if not useOneTopNuis else '')
         # minuit.DefineParameter(i+len(regions), muttbarName, 1.3, 0.01, 0.00001, 5)
-        minuit.DefineParameter(i + len(regions), muttbarName, intial_top, intial_top * 1/steps_top, 0.0001, 200)
+        minuit.DefineParameter(i + len(regions), muttbarName, intial_top, intial_top * 1/steps_top, 0.0001, 10)
     return
     
 

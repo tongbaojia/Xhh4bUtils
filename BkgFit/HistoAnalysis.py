@@ -8,7 +8,7 @@ import SystematicsTools_withSmoothing as SystToolsSmooth
 import ExpModGaussSmoothingSystematics as EMGSmoothSyst
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
-R.gROOT.LoadMacro("/afs/cern.ch/work/b/btong/bbbb/CHEPAnalysis/MakePlot/Xhh4bUtils/BkgFit/AtlasStyle.C") 
+R.gROOT.LoadMacro("/afs/cern.ch/work/b/btong/bbbb/MoriondAnalysis/MakePlot/Xhh4bUtils/BkgFit/AtlasStyle.C") 
 R.SetAtlasStyle()
 
 R.gROOT.SetBatch(True)
@@ -17,13 +17,13 @@ func2 = None
 # rebinFinal -- added by Qi. should be array object. Do the rebinning before writing into output files
 # nbtag_top_shape_normFit --- what top shape to be used in NORMALIZATION FIT?
 # nbtag_top_shape_SRPred --- what top shape to be used in SR prediction?
-def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/ICHEPAnalysis/Output/b77/data_test/hist-MiniNTuple.root",
-                  topfileName="/afs/cern.ch/user/b/btong/work/bbbb/ICHEPAnalysis/Output/b77/ttbar_comb_test/hist-MiniNTuple.root",
+def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnalysis/Output/b70/data_test/hist-MiniNTuple.root",
+                  topfileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnalysis/Output/b70/ttbar_comb_test/hist-MiniNTuple.root",
                   zjetfileName=None,
                   distributionName= "mHH_l",
                   n_trkjet  = ["4","3","2"],
                   n_btag    = ["4","3","2"],
-                  btag_WP     = "77",
+                  btag_WP     = "70",
                   NRebin = 10,
                   use_one_top_nuis = False,
                   use_scale_top_0b = False,
