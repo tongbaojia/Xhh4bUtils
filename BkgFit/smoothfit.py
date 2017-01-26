@@ -30,7 +30,7 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
         npar = 3
         fitChoice = DijetFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 35, -5)
+        func.SetParameters(6, 10, 1)
 
     elif fitFunction == "MJ2":
         npar = 3
@@ -48,31 +48,31 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
         npar = 3
         fitChoice = MJ4Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
+        func.SetParameters(2, 10, 1)
 
     elif fitFunction == "MJ5":
         npar = 3
         fitChoice = MJ5Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
+        func.SetParameters(2, 10, 1)
 
     elif fitFunction == "MJ6":
         npar = 3
         fitChoice = MJ6Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
+        func.SetParameters(2, 10, 1)
 
     elif fitFunction == "MJ7":
         npar = 3
         fitChoice = MJ7Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
+        func.SetParameters(2, 10, 1)
 
     elif fitFunction == "MJ8":
         npar = 3
         fitChoice = MJ8Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(1, 10, 1)
+        func.SetParameters(2, 10, 1)
 
     elif fitFunction == "GaussExp":
         npar = 5
@@ -686,23 +686,22 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
 
 
 
-def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False):   # qi
+def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False, physical=True):   # qi, tony
     low=R.Double(0.0)
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
 
-    oldIntegral = 0
-    newIntegral = 0
+    oldIntegral = 0.0001
+    newIntegral = 0.0001
 
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
     for ibin in range(1, hist_smooth.GetNbinsX()+1):
-        if hist_smooth.GetBinCenter(ibin) >= low:
+        if hist_smooth.GetBinLowEdge(ibin) >= low:
             oldIntegral += hist_smooth.GetBinContent(ibin)
             newIntegral += fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))
 
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
-
     if keepNorm:
         hist_smooth.Add(fitCurve, oldIntegral/newIntegral)
     else:
@@ -712,6 +711,14 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False):   # qi
         hist_smooth.SetBinContent(ibin, 0)
         hist_smooth.SetBinError(ibin, 0)
 
+    #make the function's tail mononically decreasing
+    if physical:
+        for ibin in range(hist_smooth.FindBin(low) + 1, hist_smooth.FindBin(high) - 1):
+            if hist_smooth.GetBinContent(ibin + 1) > hist_smooth.GetBinContent(ibin) and hist_smooth.GetBinContent(ibin) > 0:
+                #print hist_smooth.GetBinCenter(ibin), hist_smooth.GetBinContent(ibin), hist_smooth.GetBinContent(ibin + 1)
+                hist_smooth.SetBinContent(ibin + 1, hist_smooth.GetBinContent(ibin))
+    #this is still a mystery...
+    #print oldIntegral, newIntegral, low, high, hist.Integral(), hist_smooth.Integral(), fitCurve.Integral(low, high)
     return hist_smooth
 
 def MakeSmoothHistoWithError(hist, smoothResult, lowFillVal=500, keepNorm=False):

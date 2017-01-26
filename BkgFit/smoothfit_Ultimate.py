@@ -103,11 +103,11 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
 
     if fitResult.Status() != 0:
-        print "Error in smoothing fit: did not terminate properly. Exiting"
+        print "\x1b[1;33;41m Error!!! \x1b[0m", "in smoothing fit: did not terminate properly. Exiting"
         c=R.TCanvas()
         #R.SetOwnership(c,False)
         histo.Draw()
-        c.SaveAs("failed__"+outfileName+".pdf")
+        c.SaveAs("Xhh4bUtils/failed__"+outfileName+".pdf")
         sys.exit(0)
             
     
@@ -651,8 +651,8 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False):   # qi
     newIntegral = 0
 
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
-    for ibin in range(1, hist_smooth.GetNbinsX()+1):
-        if hist_smooth.GetBinCenter(ibin) >= low:
+    for ibin in range(0, hist_smooth.GetNbinsX()+1):
+        if hist_smooth.GetBinLowEdge(ibin) >= low:
             oldIntegral += hist_smooth.GetBinContent(ibin)
             newIntegral += fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))
 
@@ -667,7 +667,7 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=False):   # qi
     for ibin in range(1, hist_smooth.FindBin(lowFillVal)):
         hist_smooth.SetBinContent(ibin, 0)
         hist_smooth.SetBinError(ibin, 0)
-
+    #print oldIntegral, newIntegral, low, high, hist.Integral(), hist_smooth.Integral(), fitCurve.Integral(low, high)
     return hist_smooth
 
 def MakeSmoothHistoWithError(hist, smoothResult, lowFillVal=500, keepNorm=False):

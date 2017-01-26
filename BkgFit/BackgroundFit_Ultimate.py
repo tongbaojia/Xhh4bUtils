@@ -7,8 +7,11 @@ from copy import deepcopy
 from GetEigenVariations import GetEigenVariations
 from HistoTools import HistLocationString as HistLocStr
 from HistoTools import CheckAndGet
-R.gROOT.LoadMacro("AtlasStyle.C") 
-R.SetAtlasStyle()
+try:
+    R.gROOT.LoadMacro("AtlasStyle.C") 
+    R.SetAtlasStyle()
+except AttributeError:
+    print "Cannot import ATLAS Style!"
 
 
 regions = {}
@@ -393,16 +396,24 @@ def MakePlot(region, muqcd, muttbar):
 
 
 def Fit( minuit ):
+
     ClearMinuit( minuit )
-    
+    retry = 0
     migradStat = minuit.Migrad()
-    if migradStat != 0:
-        print "Error in background fit: Migrad did not terminate properly. Exiting"
+
+    while migradStat != 0 and retry < 5:
+        retry += 1
+        print "Retry fit: ", retry
+        ClearMinuit( minuit, retry ) 
+        migradStat = minuit.Migrad()
+
+    if retry == 5 and migradStat != 0:
+        print "\x1b[1;33;41m Error!!! \x1b[0m", "in background fit: did not terminate properly. Exiting"
         sys.exit(0)
     
     minosStat  = minuit.Command("MINOS")
     if minosStat != 0:
-        print "Error in background fit: Minos did not terminate properly. Exiting"
+        print "\x1b[1;33;41m Error!!! \x1b[0m", "in background fit: did not terminate properly. Exiting"
         sys.exit(0)
 
 
@@ -465,7 +476,7 @@ def Fit( minuit ):
     return out
 
 
-def ClearMinuit( minuit ):
+def ClearMinuit( minuit, retry=0 ):
     minuit.Command("CLEAR")
     #initialize the parameters
     for i, reg in enumerate(regions):
@@ -476,20 +487,20 @@ def ClearMinuit( minuit ):
         #print reg
         #needs to trick the fit to offset it a bit?
         if "FourTag" in reg:
-            intial_muqcd = 0.0003
-            intial_top   = 1.0
-            steps_muqcd  = 100.0
-            steps_top    = 50.0
+            intial_muqcd = 0.005 + retry * 0.001 #0.006 works for syst;
+            intial_top   = 0.8 + retry * 0.1 #1.0 works for syst; 0.8 for AlltrkRw
+            steps_muqcd  = 100.0 #100 works for syst
+            steps_top    = 100.0 #50 works for syst
         elif "ThreeTag" in reg:
-            intial_muqcd = 0.126 #0.0085
-            intial_top   = 1.2
-            steps_muqcd  = 200.0
-            steps_top    = 100.0
+            intial_muqcd = 0.125 + retry * 0.1 #0.0085 #0.125 works for syst
+            intial_top   = 1.25 + retry * 0.1 #1.25 works for syst
+            steps_muqcd  = 100.0 #200 works for syst
+            steps_top    = 100.0 #100 works for syst
         elif "TwoTag_split" in reg:
-            intial_muqcd = 0.04 #0.037; or if fails, 0.001 or 0.06
-            intial_top   = 1.0
-            steps_muqcd  = 200.0
-            steps_top    = 100.0
+            intial_muqcd = 0.06 + retry * 0.01 #0.037; or if fails, 0.001 or 0.06 #0.06 works for syst
+            intial_top   = 1.02 + retry * 0.1 #1.02 works for syst
+            steps_muqcd  = 100.0 #200 works for syst
+            steps_top    = 100.0 #100 works for syst
         elif "TwoTag" in reg:
             intial_muqcd = 0.05 #0.04
             intial_top   = 2.0
@@ -497,7 +508,7 @@ def ClearMinuit( minuit ):
             intial_muqcd = 0.36 #0.36
             intial_top   = 1.5
         #DefineParameter(parNo, name, initVal, initSTEP!, lowerLimit, upperLimit)
-        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.000001, 1)
+        minuit.DefineParameter(i, "muqcd_"+regions[i], intial_muqcd, intial_muqcd * 1/steps_muqcd, 0.00001, 1)
         if useOneTopNuis and i!=0:
             continue
         muttbarName = "muttbar"+("_"+regions[i] if not useOneTopNuis else '')
