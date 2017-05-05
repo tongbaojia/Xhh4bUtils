@@ -70,7 +70,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
         func.SetParameters(1, 10, 1)
 
-    elif fitFunction == "MJ8":
+    elif fitFunction == "MJ8": ##maybe new default
         npar = 3
         fitChoice = MJ8Func
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
@@ -102,8 +102,19 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), makePlots = Fa
     Lmode = ("L" if useLikelihood else "")
     fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
 
+    retry = 0
+    while retry < 10 and fitResult.Status() != 0:
+        print "Retry...", retry
+        if retry == 0:
+            func.SetParameters(1, 10, 1)
+        else:
+            func.SetParameters(1 + retry * 2, 10, 1 - retry * 2)
+
+        fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
+        retry += 1
+
     if fitResult.Status() != 0:
-        print "\x1b[1;33;41m Error!!! \x1b[0m", "in smoothing fit: did not terminate properly. Exiting"
+        print "\x1b[1;33;41m Error!!! \x1b[0m", "in smoothing fit: did not terminate properly. Exiting", ouutfilepath
         c=R.TCanvas()
         #R.SetOwnership(c,False)
         histo.Draw()

@@ -2,6 +2,7 @@ import ROOT as R
 import numpy as np
 from copy import deepcopy
 import sys, time, argparse, os, glob
+#import smoothfit_Ultimate as smoothfit
 import smoothfit
 import BackgroundFit_Ultimate as BkgFit
 import SystematicsTools_withSmoothing as SystToolsSmooth
@@ -23,8 +24,8 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                   distributionName= "mHH_l",
                   n_trkjet  = ["4","3","2"],
                   n_btag    = ["4","3","2"],
-                  btag_WP     = "70",
-                  NRebin = 10,
+                  btag_WP   = "70",
+                  NRebin    = 20,
                   use_one_top_nuis = False,
                   use_scale_top_0b = False,
                   nbtag_top_shape_SRPred_for4b = "33",
@@ -367,7 +368,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             output_Dict[r]["qcd"]["smoothFuncup_super"] = qcd_r_func_up_super
             output_Dict[r]["qcd"]["smoothFuncdown_super"] = qcd_r_func_dw_super
             
-            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1750","2000","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1400","1500"],
+            smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = ["1850","2000","2250","2500"], fitMinVals=[str(qcdSmoothRange[0]),"1300","1400"],
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
             
             ## ttbar smoothing variations##############################################################################

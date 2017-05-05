@@ -30,7 +30,7 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
         npar = 3
         fitChoice = DijetFunc
         func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
-        func.SetParameters(6, 10, 1)
+        func.SetParameters(-5, 10, -5)
 
     elif fitFunction == "MJ2":
         npar = 3
@@ -102,6 +102,15 @@ def smoothfit(histo, fitFunction = "Dijet", fitRange = (900, 3000), outrange_sta
 
     #if verbose:
         #sys.exit(0)
+    retry = 0
+    while retry < 10 and fitResult.Status() != 0:
+        print "Retry...", retry
+        if retry == 0:
+            func.SetParameters(1, 10, 1)
+        else:
+            func.SetParameters(1 + retry * 2, 10, 1 - retry * 2)
+        fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
+        retry += 1
 
     if fitResult.Status() != 0:
         print "Error in smoothing fit: did not terminate properly. Exiting"
@@ -217,7 +226,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
 
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]
 
-    funclist = ["Dijet","Exp","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]
+    funclist = ["Dijet","MJ2","MJ3","MJ4","MJ5","MJ6","MJ7","MJ8"]
 
     funclist_pass = {}    
 
@@ -817,7 +826,7 @@ def PassIntegralCondition(hist, func, integralMaxRatio, testRanges = [[1500, 200
             print "PassIntegralCondition:: function integral is Zero!!!"
             sys.exit(0)
 
-        if h_int / f_int < 0.5 or  h_int / f_int > 2:
+        if h_int / f_int < 0.4 or  h_int / f_int > 2:
             return False
 
     return True

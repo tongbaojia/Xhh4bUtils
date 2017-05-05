@@ -31,6 +31,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
                   distributionName    = ["LeadCaloJetM"],
                   n_trkjet            = ["4", "3", "2", "1"],
                   n_btag              = ["4", "3", "2s"],#"2", "1"], #["4", "3", "2s", "2", "1"],
+                  a_ttbar             = 1.06, #this is to prescale the ttbar normalization
                   btag_WP             = "77", #not useful for Xhh Framework
                   NRebin              = 1,
                   BKG_model           = "s", #define the bkg models
@@ -156,8 +157,8 @@ def BackgroundFit(datafileName        ="hist_data.root",
                 ht.Scale( histos[r]["top"][h].Integral() / ht.Integral() ) #scale to correct norm for region
             else:
                 ht = histos[r]["top"][h].Clone("h_top_"+r+h)
-            hz = histos[r]["zjet"][h].Clone("h_zjet_"+r+h)
 
+            hz = histos[r]["zjet"][h].Clone("h_zjet_"+r+h)
             #start background modeling
             #print regions
             bkg_model = BKG_dic[r]
@@ -173,7 +174,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
             ht2 = histos[bkg_model]["top"][h].Clone("h_top_model_"+r+h)
             hz2 = histos[bkg_model]["zjet"][h].Clone("h_zjet_"+r+h)
             #substract top and Zjet contributions from data       
-            hq.Add( ht2, -1.0)
+            hq.Add( ht2, -1.0 * a_ttbar)
             if (Fitzjets):
                 hq.Add( hz2, -1.0) #do not substract z+jets
             ##add an option to rescale the distribution here
@@ -401,7 +402,7 @@ def Fit( minuit ):
     retry = 0
     migradStat = minuit.Migrad()
 
-    while migradStat != 0 and retry < 5:
+    while migradStat != 0 and retry < 10:
         retry += 1
         print "Retry fit: ", retry
         ClearMinuit( minuit, retry ) 
@@ -488,11 +489,11 @@ def ClearMinuit( minuit, retry=0 ):
         #needs to trick the fit to offset it a bit?
         if "FourTag" in reg:
             intial_muqcd = 0.005 + retry * 0.001 #0.006 works for syst;
-            intial_top   = 0.8 + retry * 0.1 #1.0 works for syst; 0.8 for AlltrkRw
+            intial_top   = 0.7 + retry * 0.1 #1.0 works for syst; 0.8 for AlltrkRw
             steps_muqcd  = 100.0 #100 works for syst
             steps_top    = 100.0 #50 works for syst
         elif "ThreeTag" in reg:
-            intial_muqcd = 0.125 + retry * 0.1 #0.0085 #0.125 works for syst
+            intial_muqcd = 0.0125 + retry * 0.1 #0.0085 #0.125 works for syst
             intial_top   = 1.25 + retry * 0.1 #1.25 works for syst
             steps_muqcd  = 100.0 #200 works for syst
             steps_top    = 100.0 #100 works for syst
