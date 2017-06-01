@@ -520,7 +520,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         ########################################################################################################
         ##### This is adding systematics from the CR
         if QCDSyst_Dict!=None and isMhhDistribution:  # qi
-            original_norm = qcd_r.Integral(0, 4000)
+            original_norm = qcd_r.Integral(0, 4000) ##restricted range
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
             qvar_shape_dw = qcd_r.Clone("qvar_QCDshape_dw")
 

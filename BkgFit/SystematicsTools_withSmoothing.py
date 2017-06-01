@@ -244,7 +244,7 @@ def QCDSystematics(datafileName="hist_data.root",
 
         
 
-        QCDSyst_Dict["Shape_"+r] = ratio_sm.Clone(ratio_sm.GetName() + r)
+        QCDSyst_Dict["Shape_"+r] = ratio_sm.Clone(ratio_sm.GetName() + r) ##this was a huge bug...
 
         #scale is max of ratio non-unity and CR stat error 
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r), _extraNormCRSysDict.get(r, 0.) ] ) )
