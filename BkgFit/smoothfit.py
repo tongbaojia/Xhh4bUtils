@@ -250,7 +250,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
 
         if integralMaxRatio is not None and not PassIntegralCondition(h_clone, curr_result["nom"], integralMaxRatio):
             funclist_pass[theFunc] = False
-            print "failed norm", h_clone.GetName(), theFunc
+            print "failed norm", h_clone.GetName(), theFunc, h_clone.Integral(), curr_result["nom"]
             continue
         
         funclist_pass[theFunc] = True

@@ -9,19 +9,12 @@ from HistoTools import CheckAndGet
 import smoothfit
 
 
-rfunc1 = None
-rfunc2 = None
-
-def rfunc_ratio(x):
-    return rfunc1.Eval(x[0]) / rfunc2.Eval(x[0])
-
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-     "44": 0.108,
-     "33": 0.0721,
-     "22": 0.0101
+     "44": 0.148,
+     "33": 0.0708,
+     "22": 0.0285
 }
-
 
 def QCDSystematics(datafileName="hist_data.root",
                     topfileName="hist_ttbar.root",
@@ -41,10 +34,9 @@ def QCDSystematics(datafileName="hist_data.root",
                     makePlots = False,
                     verbose = False,
                     outfileNameBase="QCDSysfitSmooth.root"):
-
-    global rfunc1
-    global rfunc2
-    
+    ##this cannot have the norm fixed
+    # global rfunc1
+    # global rfunc2
     ##### Parse Inputs ############################################
     dist_name   = distributionName
     
@@ -87,7 +79,7 @@ def QCDSystematics(datafileName="hist_data.root",
     # collect all histograms
     for r in ["44","33","22","40","30","20"]:
         folder_r = HistLocStr(dist_name, r[0], r[1], btag_WP, "CR")  #folder( r[0], r[1], btag_WP)
-        
+        print folder_r
         data_r   = datafile.Get(folder_r).Clone("data_"+r)
         data_r.SetDirectory(0)
         
@@ -160,7 +152,7 @@ def QCDSystematics(datafileName="hist_data.root",
         #now do ratio
         bkg_r = qcd_r.Clone("bkg__"+r)
         bkg_r.Add( top_r )
-        bkg_r.Add( zjet_r )
+        #bkg_r.Add( zjet_r )
 
 
         N_bkg_r = bkg_r.Integral()
@@ -180,22 +172,23 @@ def QCDSystematics(datafileName="hist_data.root",
         leg.SetMargin(0.3)
         histos[r]["data"].SetXTitle("m_{JJ} [GeV]")
         histos[r]["data"].SetYTitle("Entries")
+        histos[r]["data"].GetXaxis().SetRangeUser(500, 4000)
         histos[r]["data"].Draw("E1")
         leg.AddEntry(histos[r]["data"], "CR data", "LP")
 
         ##################################
         ## smooth bkg and data
         ##################################
-        data_sm = smoothfit.smoothfit(histos[r]["data"], fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, useLikelihood=True, outfileName="data_smoothfit_CRsyst_"+r+".root")
-        data_sm_h = smoothfit.MakeSmoothHisto(histos[r]["data"], data_sm["nom"])
+        data_sm   = smoothfit.smoothfit(histos[r]["data"], fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, useLikelihood=True, outfileName="data_smoothfit_CRsyst_"+r+".root")
+        data_sm_h = smoothfit.MakeSmoothHisto(histos[r]["data"], data_sm["nom"], keepNorm=False)
 
         data_sm["nom"].SetNameTitle("data_smoothfit_CRsyst_"+r,"data_smoothfit_CRsyst_"+r)
         data_sm["nom"].SetLineColor(R.kBlack)
         data_sm["nom"].Draw("same")
         leg.AddEntry(data_sm["nom"], "CR data smoothed", "L")
 
-        bkg_sm = smoothfit.smoothfit(bkg_r, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="bkg_smoothfit_CRsyst_"+r+".root")
-        bkg_sm_h = smoothfit.MakeSmoothHisto(bkg_r, bkg_sm["nom"])
+        bkg_sm   = smoothfit.smoothfit(bkg_r, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="bkg_smoothfit_CRsyst_"+r+".root")
+        bkg_sm_h = smoothfit.MakeSmoothHisto(bkg_r, bkg_sm["nom"], keepNorm=False)
 
         bkg_sm["nom"].SetNameTitle("bkg_smoothfit_CRsyst_"+r,"bkg_smoothfit_CRsyst_"+r)
         bkg_sm["nom"].SetLineColor(R.kBlue)
@@ -206,6 +199,8 @@ def QCDSystematics(datafileName="hist_data.root",
   
         rfunc1 = data_sm["nom"]
         rfunc2 = bkg_sm["nom"]
+        def rfunc_ratio(x):
+            return rfunc1.Eval(x[0]) / rfunc2.Eval(x[0])
         xMax   = histos[r]["data"].GetXaxis().GetBinUpEdge(histos[r]["data"].GetXaxis().GetNbins())
         ratio_sm = R.TF1("ratio_crsys_sm"+r, rfunc_ratio, SmoothRange[0], xMax, 0)
         ## ratio_sm.SetLineColor(R.kGray)
@@ -224,8 +219,8 @@ def QCDSystematics(datafileName="hist_data.root",
             leg.AddEntry(dup, "CR data smoothed variation", "L")
 
 
-            data_r_qup = smoothfit.MakeSmoothHisto(histos[r]["data"], dup)
-            data_r_qdw = smoothfit.MakeSmoothHisto(histos[r]["data"], ddw)
+            data_r_qup = smoothfit.MakeSmoothHisto(histos[r]["data"], dup, keepNorm=False)
+            data_r_qdw = smoothfit.MakeSmoothHisto(histos[r]["data"], ddw, keepNorm=False)
 
             for ibin in range(1,  data_sm_h.GetNbinsX()+1):
                 err_val = np.max( np.abs( [ data_sm_h.GetBinContent(ibin) - data_r_qup.GetBinContent(ibin), data_sm_h.GetBinContent(ibin) - data_r_qdw.GetBinContent(ibin)] ) )
@@ -249,7 +244,7 @@ def QCDSystematics(datafileName="hist_data.root",
 
         
 
-        QCDSyst_Dict["Shape_"+r] = ratio_sm
+        QCDSyst_Dict["Shape_"+r] = ratio_sm.Clone(ratio_sm.GetName() + r)
 
         #scale is max of ratio non-unity and CR stat error 
         QCDSyst_Dict["Scale_"+r] = np.max( np.abs( [ (N_bkg_r - N_data_CR_r)/N_bkg_r,  (Err_N_data_CR_r / N_data_CR_r), _extraNormCRSysDict.get(r, 0.) ] ) )
@@ -262,7 +257,7 @@ def QCDSystematics(datafileName="hist_data.root",
         h_ratio_cr_nom.SetFillColor(R.kBlack)
         h_ratio_cr_nom.SetFillStyle(3004)
         h_ratio_cr_nom.SetMarkerSize(0)
-        h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
+        h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 4000)
         h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 3)
         h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
@@ -283,6 +278,9 @@ def QCDSystematics(datafileName="hist_data.root",
         c2.SaveAs(outfileNameBase.split(".root")[0] + "_ratio_" + r + ".pdf")
         c2.Close()
 
+        ratio_sm = None
+        rfunc1 = None
+        rfunc2 = None
 
     datafile.Close()
     topfile.Close()
@@ -292,18 +290,14 @@ def QCDSystematics(datafileName="hist_data.root",
 
 def ttbarShapeSysSR(topfileName="hist_ttbar.root",
                     distributionName= "mHH_l",
-                    signal_region = "33",
+                    signal_region  = "33",
                     compare_region = "44",
-                    btag_WP     = "77",
+                    btag_WP        = "77",
                     smoothing_func = "Exp",
                     SmoothRange = (1200, 3000),# (100, 2500),
                     makePlots = False,
                     verbose = False,
                     outfileNameBase="TopShapeSRSysfitSmooth.root"):
-
-    
-    global rfunc1
-    global rfunc2
     
     topfile  = R.TFile(topfileName,"READ")
 
@@ -313,17 +307,17 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     
     ## get top SR shape
-    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
     top_sig    = topfile.Get(folder_sig).Clone("top_sig_"+signal_region)
     top_sig.SetDirectory(0)
-    top_sig.Rebin(5)
+    top_sig.Rebin(10)
 
 
     ## get top comparison shape
-    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
     top_comp    = topfile.Get(folder_comp).Clone("top_comp_"+compare_region)
     top_comp.SetDirectory(0)
-    top_comp.Rebin(5)
+    top_comp.Rebin(10)
 
     ## remove negative values
     ## assume same binning, else division won't work later
@@ -373,6 +367,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     rfunc1 = top_comp_sm["nom"]
     rfunc2 = top_sig_sm["nom"]
+    def rfunc_ratio(x):
+        return rfunc1.Eval(x[0]) / rfunc2.Eval(x[0])
     xMax = top_comp.GetXaxis().GetBinUpEdge(top_comp.GetXaxis().GetNbins())
     ratio_sm = R.TF1("ratio_topsys_sm", rfunc_ratio, SmoothRange[0], xMax, 0)
 
@@ -420,7 +416,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     h_ratio_cr_nom.SetFillColor(R.kBlack)
     h_ratio_cr_nom.SetFillStyle(3004)
     h_ratio_cr_nom.SetMarkerSize(0)
-    h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 3000)
+    h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 4000)
     h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 3)
     h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
     h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
@@ -442,9 +438,8 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     c2.SaveAs(outfileNameBase.split(".root")[0] + "_sig"+signal_region+"_comp"+ compare_region +"_ratio.pdf")
     c2.Close()
 
-
     topfile.Close()
-    
+
     return ttbarShapeSRSyst_Dict
 
 
