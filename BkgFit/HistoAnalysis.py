@@ -25,7 +25,6 @@ def options():
     parser.add_argument("--hist", default="mHH_l")
     return parser.parse_args()
 
-
 def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnalysis/Output/Moriond_bkg_5/data_test/hist-MiniNTuple.root",
                   topfileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnalysis/Output/Moriond_bkg_5/ttbar_comb_test/hist-MiniNTuple.root",
                   zjetfileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnalysis/Output/Moriond_bkg_5/zjets_test/hist-MiniNTuple.root",
@@ -84,7 +83,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
 
     ##for outputing
     isMhhDistribution = (distributionName=="mHH_l" or distributionName=="mHH_pole")
-    do_smoothing  = (doSmoothing if isMhhDistribution else False)   # qi
+    do_smoothing      = (doSmoothing if isMhhDistribution else False)   # qi
     ##################################################################
     ##### Storage Variables ############################################
     output_Dict = { }
@@ -113,8 +112,8 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         #                                       BKG_dic   = {"FourTag":"NoTag_4Trk",  "ThreeTag":"NoTag_3Trk", "TwoTag_split":"NoTag_2Trk_split",  "TwoTag":"OneTag",  "OneTag":"NoTag"},
         #                                       fitzjets  = fitzjets)
 
-        bkgest_lst = ["FourTag", "ThreeTag", "TwoTag_split"] 
-        bkgest_dict       = {"FourTag":"NoTag_4Trk",  "ThreeTag":"NoTag_3Trk", "TwoTag_split":"NoTag_2Trk_split",  "TwoTag":"OneTag",  "OneTag":"NoTag"}
+        bkgest_lst    = ["FourTag", "ThreeTag", "TwoTag_split"] 
+        bkgest_dict   = {"FourTag":"NoTag_4Trk",  "ThreeTag":"NoTag_3Trk", "TwoTag_split":"NoTag_2Trk_split",  "TwoTag":"OneTag",  "OneTag":"NoTag"}
         bkgFitResults = BkgFit.BackgroundFit(datafileName=datafileName,
                                               topfileName=topfileName,
                                               zjetfileName=zjetfileName,
@@ -152,7 +151,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                                         btag_WP       = btag_WP,
                                         mu_qcd_vals   = bkgFitResults["muqcd"],
                                         topscale_vals = bkgFitResults["muttbar"],
-                                        NRebin        = n_rebin, #this used to be 5, incease to 10 just like SR
+                                        NRebin        = n_rebin/2, #10 just like SR; 5 is a finner bin
                                         smoothing_func = smoothing_func,
                                         SmoothRange    = qcdSmoothRange,# (100, 2500), #this is fixed...
                                         use_one_top_nuis = use_one_top_nuis,
@@ -260,7 +259,6 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         top_r.Scale( top_scale )
         print "top total:", top_r.Integral(), " ; qcd total:", qcd_r.Integral(), "here! 2"
 
-
         bkg_r = qcd_r.Clone("bkg__" + r)
         bkg_r.Add( top_r, 1)
         bkg_r.Add( zjet_r, 1)
@@ -320,7 +318,6 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         # for systematics, don't need anything after this in loop
         if isSystematicVariation:
             continue
-
         ##################################################################################################################################
         ### propagate correlated systematics from the smoothing procedure---> these "replace" the stat error on the bins     #############
         ##################################################################################################################################
@@ -412,7 +409,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
 
             smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = stepped_max_vals, fitMinVals=stepped_min_vals,
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
-            
+
             ## ttbar smoothing variations##############################################################################
             if not addSmoothErrorBin:
                 for ivar in range(len(top_sm["vars"])):
@@ -538,15 +535,14 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                     qvar_shape_up_final = smoothfit.MakeSmoothHistoWithError(qvar_shape_up, qvar_shape_up_sm)
                     qvar_shape_dw_final = smoothfit.MakeSmoothHistoWithError(qvar_shape_dw, qvar_shape_dw_sm)
                 else:
-                    qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"], keepNorm=False)
-                    qvar_shape_dw_final = smoothfit.MakeSmoothHisto(qvar_shape_dw, qvar_shape_dw_sm["nom"], keepNorm=False)
-
+                    qvar_shape_up_final = smoothfit.MakeSmoothHisto(qvar_shape_up, qvar_shape_up_sm["nom"], keepNorm=True)
+                    qvar_shape_dw_final = smoothfit.MakeSmoothHisto(qvar_shape_dw, qvar_shape_dw_sm["nom"], keepNorm=True)
 
                 qvar_shape_up_final.Multiply( QCDSyst_Dict["Shape_"+r] )
                 qvar_shape_dw_final.Divide( QCDSyst_Dict["Shape_"+r] )
 
-                for i in range(1, qvar_shape_up_final.GetNbinsX()):
-                    print r, i, qvar_shape_up_final.GetBinContent(i), qvar_shape_up_final.GetBinCenter(i), qcd_r.GetBinContent(i), QCDSyst_Dict["Shape_"+r].Integral(qcd_r.GetBinLowEdge(i), qcd_r.GetBinLowEdge(i+1))
+                # for i in range(1, qvar_shape_up_final.GetNbinsX()):
+                #     print r, i, qvar_shape_up_final.GetBinContent(i), qvar_shape_up_final.GetBinCenter(i), qcd_r.GetBinContent(i), QCDSyst_Dict["Shape_"+r].Integral(qcd_r.GetBinLowEdge(i), qcd_r.GetBinLowEdge(i+1))
 
                 print "HERE!!!!!!!!", QCDSyst_Dict["Shape_"+r], qvar_shape_up_final.GetName(), original_norm, qvar_shape_up_final.Integral(0, 4000), qvar_shape_dw_final.Integral(0, 4000)
 
@@ -556,9 +552,9 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                 qvar_shape_up_final = qvar_shape_up.Clone("qcd_hh_"+r+"_QCDShapeCRup__clone")
                 qvar_shape_dw_final = qvar_shape_dw.Clone("qcd_hh_"+r+"_QCDShapeCRdown__clone")
 
-            #make sure normalization is correct!
-            qvar_shape_up_final.Scale( original_norm/qvar_shape_up_final.Integral(0, 4000) )
-            qvar_shape_dw_final.Scale( original_norm/qvar_shape_dw_final.Integral(0, 4000) )
+            #make sure normalization is correct; not necessary for now
+            #qvar_shape_up_final.Scale( original_norm/qvar_shape_up_final.Integral(0, 4000) )
+            #qvar_shape_dw_final.Scale( original_norm/qvar_shape_dw_final.Integral(0, 4000) )
             if rebinFinal is not None:
                 qvar_shape_up_final = qvar_shape_up_final.Rebin(len(rebinFinal)-1, qvar_shape_up_final.GetName()+"_rebinFinal", rebinFinal)
                 qvar_shape_dw_final = qvar_shape_dw_final.Rebin(len(rebinFinal)-1, qvar_shape_dw_final.GetName()+"_rebinFinal", rebinFinal)

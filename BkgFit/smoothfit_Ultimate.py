@@ -103,7 +103,6 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
          func = R.TF1(fitName, fitChoice, fitRange[0], fitRange[1], npar)
          func.SetParameters(-1, 10, -4, 0.01)
 
-
     Vmode = ("Q" if not verbose else "")
     Lmode = ("L" if useLikelihood else "")
     fitResult = histo.Fit(fitName, "S0"+Vmode+Lmode, "", fitRange[0], fitRange[1])
@@ -141,7 +140,6 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
         print cov
         print "correlation matrix"
         print corr
-    
 
     S, U= np.linalg.eigh( cov )
     Sd = np.diag( S )
@@ -149,13 +147,11 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
 
     evars = GetEigenVariations( cov )
 
-    
     fitFunc = histo.GetFunction(fitName)
     fitProb = fitFunc.GetProb()
 
     params = array('d',[0]*npar)
     fitFunc.GetParameters( params )
-
 
     fit = []
     fiterr = []
@@ -170,7 +166,6 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
         zu = z + evars[i]
         zd = z - evars[i]
         z_variations.append( [zu, zd] )
-
 
     drawFunc = R.TF1("drawfit_"+outfileName, fitChoice, fitRange[0], 5000, npar)
     drawFunc.SetParameters( params )
@@ -209,7 +204,6 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
             fdw.Draw("same")
 
         fvar.append([fup, fdw])
-    
 
     #raw_input()
 
@@ -780,10 +774,8 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=True):   # qi
             oldIntegral += hist_smooth.GetBinContent(ibin)
             newIntegral += fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))/hist_smooth.GetBinWidth(ibin)
             #print oldIntegral, newIntegral, ibin, hist_smooth.GetBinCenter(ibin)
-
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
-        
 
     if keepNorm:
         #print oldIntegral, newIntegral
@@ -899,7 +891,7 @@ def PassIntegralCondition(hist, func, integralMaxRatio, testRanges = [[1200, 150
             sys.exit(0)
 
         if h_int / f_int < 1/(integralMaxRatio) or  h_int / f_int > integralMaxRatio:
-            print itest, h_int, f_int, hist.GetXaxis().GetBinCenter(hist.FindBin( itest[0] ))
+            #print itest, h_int, f_int, hist.GetXaxis().GetBinCenter(hist.FindBin( itest[0] ))
             return False
 
     return True

@@ -315,7 +315,7 @@ def MakePlot(region, muqcd, muttbar):
         h_data2.SetFillColor(0)
         h_data2.SetLineColor(R.kBlack)
         h_data2.SetLineWidth(2)
-        h_data2.SetMaximum(h_data2.GetMaximum() * 1.3)
+        h_data2.SetMaximum(h_data2.GetMaximum() * 1.5)
         h_data2.SetXTitle( "Jet mass [GeV]")
         h_data2.SetYTitle( "Entries" )
         #h_data2.Rebin(nrebin)
@@ -358,19 +358,19 @@ def MakePlot(region, muqcd, muttbar):
         h_data2.Draw("sameE")
 
         leg = R.TLegend(0.65,0.7,0.9,0.9)
-        leg.AddEntry(h_data2,"Data ("+region+"), 2015 + 2016","EL")
+        leg.AddEntry(h_data2,"Data ("+region+"), 15 + 16","EL")
         leg.AddEntry(h_top2,"ttbar MC","F")
         if (Fitzjets):
             leg.AddEntry(h_zjet2,"Z+jets MC","F")
         leg.AddEntry(h_qcd2,"QCD model","L")
-        leg.AddEntry(h_pred,"ttbar MC + QCD model","L")
+        leg.AddEntry(h_pred,"ttbar + QCD","L")
         leg.SetFillColor(0)
         leg.SetBorderSize(0)
         leg.Draw()
 
         l = R.TLatex(0.65, 0.65, h.replace("_", " "))
         l.SetNDC()
-        l.SetTextSize(0.03)
+        l.SetTextSize(0.04)
         l.Draw("same")
 
         #raw_input()
