@@ -140,6 +140,7 @@ def BackgroundFit(datafileName        ="hist_data.root",
         histo_r  = {"data": data_r, "top": top_r, "zjet": zjet_r}
         histos[r] = histo_r
     # put relevant histograms in global lists for use in LogLk
+    print "the fit regions are: ", regions
     for r in regions:
         h_data[r] = {} #this is the data to fit
         h_qcd[r] = {} #this is the qcd fit
@@ -151,9 +152,12 @@ def BackgroundFit(datafileName        ="hist_data.root",
             hd = histos[r]["data"][h].Clone("h_data_"+r+h)
             if nbtag_top_shape != None:
                 ht = histos[r]["top"][h].Clone("h_top_"+r+h)
-                #change for top selection, from 4b to 3b
-                if r == "FourTag":
-                    ht = histos["ThreeTag"]["top"][h].Clone("h_top_"+r+h)
+                ##change for top selection, from 4b to 3b
+                # if r == "FourTag":
+                #     ht = histos["ThreeTag"]["top"][h].Clone("h_top_"+r+h)
+                ##change for top selection, from 4b/3b to 2bs
+                if r == "FourTag" or r == "ThreeTag":
+                    ht = histos["TwoTag_split"]["top"][h].Clone("h_top_"+r+h)
                 ht.Scale( histos[r]["top"][h].Integral() / ht.Integral() ) #scale to correct norm for region
             else:
                 ht = histos[r]["top"][h].Clone("h_top_"+r+h)

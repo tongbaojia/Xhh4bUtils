@@ -11,9 +11,9 @@ import smoothfit
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-     "44": 0.148,
-     "33": 0.0708,
-     "22": 0.0285
+     "44": 0.105,
+     "33": 0.043,
+     "22": 0.028
 }
 
 def QCDSystematics(datafileName="hist_data.root",
@@ -129,7 +129,7 @@ def QCDSystematics(datafileName="hist_data.root",
         qcd_r.Add( zjet_0b, -1)
         qcd_int = qcd_r.Integral()
 
-        if nbtag_top_shape_for4b != None:
+        if nbtag_top_shape_for4b != None: ##this is fine; replace everything with 2bs now
             top_r = histos[nbtag_top_shape_for4b]["top"].Clone("top__"+r)
             top_r.Scale( histos[r]["top"].Integral() / top_r.Integral() ) #scale to correct norm for region
         else:
@@ -207,6 +207,18 @@ def QCDSystematics(datafileName="hist_data.root",
 
 
 
+        for ivar in range(len(bkg_sm["vars"])):
+            dup = bkg_sm["vars"][ivar][0]
+            ddw = bkg_sm["vars"][ivar][1]
+
+            bkg_r_qup = smoothfit.MakeSmoothHisto(bkg_r, dup, keepNorm=False)
+            bkg_r_qdw = smoothfit.MakeSmoothHisto(bkg_r, ddw, keepNorm=False)
+
+            for ibin in range(1,  bkg_sm_h.GetNbinsX()+1):
+                err_val = np.max( np.abs( [ bkg_sm_h.GetBinContent(ibin) - bkg_r_qup.GetBinContent(ibin), bkg_sm_h.GetBinContent(ibin) - bkg_r_qdw.GetBinContent(ibin)] ) )
+                bkg_sm_h.SetBinError(ibin, np.sqrt( bkg_sm_h.GetBinError(ibin)**2 + err_val**2) )
+
+
         for ivar in range(len(data_sm["vars"])):
             dup = data_sm["vars"][ivar][0]
             ddw = data_sm["vars"][ivar][1]
@@ -226,6 +238,7 @@ def QCDSystematics(datafileName="hist_data.root",
                 err_val = np.max( np.abs( [ data_sm_h.GetBinContent(ibin) - data_r_qup.GetBinContent(ibin), data_sm_h.GetBinContent(ibin) - data_r_qdw.GetBinContent(ibin)] ) )
                 data_sm_h.SetBinError(ibin, np.sqrt( data_sm_h.GetBinError(ibin)**2 + err_val**2) )
 
+
         c.SetLogy(1)
         leg.Draw("same")
         c.SaveAs(outfileNameBase.split(".root")[0] + "_" + r + ".root")
@@ -237,12 +250,10 @@ def QCDSystematics(datafileName="hist_data.root",
         h_ratio_cr_nom.Divide( data_sm["nom"] )
         h_ratio_cr_nom.SetDirectory(0)
                 
-        h_ratio_cr = data_sm["nom"].GetHistogram()
-        h_ratio_cr.Divide( bkg_sm["nom"] )
+        h_ratio_cr = data_sm_h.Clone("data_sm_h_CRsyst2_"+r)
+        h_ratio_cr.Divide( bkg_sm_h )
         h_ratio_cr.SetDirectory(0)
 
-
-        
 
         QCDSyst_Dict["Shape_"+r] = ratio_sm.Clone(ratio_sm.GetName() + r) ##this was a huge bug...
 
@@ -254,22 +265,25 @@ def QCDSystematics(datafileName="hist_data.root",
         c2=R.TCanvas("c2_cr_"+r,"c2_cr_"+r)
         leg = R.TLegend(0.2,0.7,0.5,0.9)
         leg.SetFillColor(0)
-        h_ratio_cr_nom.SetFillColor(R.kBlack)
+        h_ratio_cr_nom.SetFillColor(R.kBlue)
         h_ratio_cr_nom.SetFillStyle(3004)
         h_ratio_cr_nom.SetMarkerSize(0)
-        h_ratio_cr_nom.GetXaxis().SetRangeUser(1000, 4000)
-        h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 3)
+        h_ratio_cr_nom.GetXaxis().SetRangeUser(1200, 4000)
+        h_ratio_cr_nom.GetYaxis().SetRangeUser(0, 5)
         h_ratio_cr_nom.GetXaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.GetYaxis().SetLabelSize(0.04)
         h_ratio_cr_nom.SetXTitle("m_{JJ} [GeV]")
         h_ratio_cr_nom.SetYTitle("Ratio")
         h_ratio_cr_nom.Draw("E2")
-        leg.AddEntry(h_ratio_cr_nom, "CR data", "LF")
+        leg.AddEntry(h_ratio_cr_nom, "CR data", "F")
 
 
-        h_ratio_cr.SetLineColor( R.kBlue )
-        h_ratio_cr.Draw("same")
-        leg.AddEntry(h_ratio_cr, "CR Prediction", "L")
+        h_ratio_cr.SetLineColor(R.kBlack)
+        h_ratio_cr.SetFillColor(R.kBlack)
+        h_ratio_cr.SetMarkerSize(0)
+        h_ratio_cr.SetFillStyle(3003)
+        h_ratio_cr.Draw("same E2")
+        leg.AddEntry(h_ratio_cr, "CR Prediction", "LF")
 
 
         ratio_sm.Draw("same")
@@ -307,17 +321,17 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     
     ## get top SR shape
-    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
     top_sig    = topfile.Get(folder_sig).Clone("top_sig_"+signal_region)
     top_sig.SetDirectory(0)
-    top_sig.Rebin(10)
+    top_sig.Rebin(5)
 
 
     ## get top comparison shape
-    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
+    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
     top_comp    = topfile.Get(folder_comp).Clone("top_comp_"+compare_region)
     top_comp.SetDirectory(0)
-    top_comp.Rebin(10)
+    top_comp.Rebin(5)
 
     ## remove negative values
     ## assume same binning, else division won't work later
@@ -331,9 +345,9 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
             top_comp.SetBinError(ibin, 0)
 
     ## normalize to same area
-    top_sig.Scale( top_comp.Integral() / top_sig.Integral() )
-
-
+    low_x = top_comp.GetXaxis().FindBin(SmoothRange[0])
+    low_y = top_comp.GetXaxis().FindBin(SmoothRange[1])
+    top_sig.Scale( top_comp.Integral(low_x, low_y) / top_sig.Integral(low_x, low_y) )
 
     c=R.TCanvas("c1_topsys","c1_topsys")
     xleg, yleg = 0.52, 0.7
@@ -342,6 +356,7 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     leg.SetBorderSize(0)
     leg.SetMargin(0.3)
     top_comp.SetXTitle("m_{JJ} [GeV]")
+    top_comp.GetXaxis().SetRangeUser(0, 4000)
     top_comp.SetYTitle("Entries")
     top_comp.Draw("E1")
     leg.AddEntry(top_comp, "Top Comparison Distribution", "LP")
@@ -349,13 +364,12 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
     #################################
     ## smooth bkg and data
     ##################################
-    top_comp_sm = smoothfit.smoothfit(top_comp, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_comp_smoothfit_TopShape4b.root")
+    top_comp_sm   = smoothfit.smoothfit(top_comp, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_comp_smoothfit_TopShape4b.root")
     top_comp_sm_h = smoothfit.MakeSmoothHisto(top_comp, top_comp_sm["nom"])
 
     top_comp_sm["nom"].SetLineColor(R.kBlack)
     top_comp_sm["nom"].Draw("same")
     leg.AddEntry(top_comp_sm["nom"], "Top Comparison Distribution Smooth", "L")
-
 
     top_sig_sm = smoothfit.smoothfit(top_sig, fitFunction = smoothing_func, fitRange = SmoothRange, makePlots = False, verbose = False, outfileName="top_sig_smoothfit_TopShape4.root")
     top_sig_sm_h = smoothfit.MakeSmoothHisto(top_sig, top_sig_sm["nom"])

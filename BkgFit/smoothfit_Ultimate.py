@@ -294,6 +294,16 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             results_hist_ud[theFunc]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][0])
             results_hist_ud[theFunc]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][1])
 
+    ##extra screen:
+    for theFunc in funclist:
+        if funclist_pass[theFunc] == False:
+            continue
+        startbin = results_hist[fitFunction].FindBin( fitRange[0] )
+        h_start  = results_hist[theFunc].GetBinContent(startbin)
+        f_start  = results_hist[fitFunction].GetBinContent(startbin)
+        if abs((f_start - h_start) / h_start) > 0.2:
+            print "failed start point", theFunc
+            funclist_pass[theFunc] = False
 
     #print results_hist
     histo_up = results_hist[fitFunction].Clone(histo.GetName() + "_" + namestr + "_up")
@@ -319,7 +329,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
                 deltas_super.append( np.abs( results_hist[fitFunction].GetBinContent(ibin) - results_hist_ud[theFunc][ivarh].GetBinContent(ibin) ) )
             
 
-        theDelta = np.max( deltas )
+        theDelta       = np.max( deltas )
         theDelta_super = np.max( deltas_super )
         #print theDelta, histo_up.GetBinContent(ibin), histo_up.GetBinCenter(ibin)
         histo_up.SetBinContent(ibin, histo_up.GetBinContent(ibin) + theDelta)
@@ -342,7 +352,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
         leg1.SetBorderSize(0)
         leg1.SetMargin(0.3)
 
-        leg2 = R.TLegend(0.2,0.6,0.55,0.9)
+        leg2 = R.TLegend(0.2,0.6,0.45,0.9)
         leg2.SetFillColor(0)
         leg2.SetBorderSize(0)
         leg2.SetMargin(0.3)
@@ -485,9 +495,10 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
     return smoothFuncCompSyst
 
 
-def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], minProb = 0.01, integralMaxRatio = 2.0, makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
+def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000), fitMaxVals = ["2000", "1500", "1750"], fitMinVals=["900","1000","1100"], minProb = 0.001, integralMaxRatio = 2.0, makePlots = False, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare.root"):
 
-    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]        
+    colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink, (R.kAzure+1), R.kGreen+2, R.kOrange+5]   
+    stylelist = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]       
 
     namestr = outfileName.split(".root")[0]
 
@@ -631,6 +642,7 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
             #print results[theFunc]["nom"], results[theFunc]["nom"].Eval(1000), results[theFunc]["nom"].Eval(2000), results[theFunc]["nom"].Eval(3000)
 
             results[fpair]["nom"].SetLineColor( colorlist[icol] )
+            results[fpair]["nom"].SetLineStyle( stylelist[icol] )
             results[fpair]["nom"].Draw("same")
 
             leg1.AddEntry(results[fpair]["nom"], fpair, "L")
@@ -770,7 +782,7 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=True):   # qi
             hist_smooth.SetBinError(ibin, 0)
             continue
 
-        if hist_smooth.GetBinLowEdge(ibin) >= low:
+        elif hist_smooth.GetBinLowEdge(ibin) >= low:
             oldIntegral += hist_smooth.GetBinContent(ibin)
             newIntegral += fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))/hist_smooth.GetBinWidth(ibin)
             #print oldIntegral, newIntegral, ibin, hist_smooth.GetBinCenter(ibin)
@@ -778,7 +790,7 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=True):   # qi
             hist_smooth.SetBinError(ibin, 0)
 
     if keepNorm:
-        #print oldIntegral, newIntegral
+        #print hist.GetName(), oldIntegral, newIntegral
         hist_smooth.Add(fitCurve, oldIntegral/newIntegral)
     else:
         hist_smooth.Add(fitCurve, 1.0)
@@ -882,6 +894,7 @@ def AddSysErrorToHist(h, sysList):
     return outputDict
 
 def PassIntegralCondition(hist, func, integralMaxRatio, testRanges = [[1200, 1500], [1500, 2000], [2000, 2500]] ):
+
     for itest in testRanges:
         h_int = hist.Integral( hist.FindBin( itest[0] ), hist.FindBin( itest[1] ), "width")
         f_int = func.Integral( hist.GetXaxis().GetBinLowEdge(hist.FindBin( itest[0] )), hist.GetXaxis().GetBinLowEdge(hist.FindBin( itest[1]) + 1))
