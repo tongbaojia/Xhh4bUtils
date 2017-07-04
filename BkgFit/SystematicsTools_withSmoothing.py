@@ -11,7 +11,7 @@ import smoothfit
 
 # hard-coded in!!!!
 _extraNormCRSysDict = {
-     "44": 0.105,
+     "44": 0.122,
      "33": 0.043,
      "22": 0.028
 }
@@ -129,7 +129,7 @@ def QCDSystematics(datafileName="hist_data.root",
         qcd_r.Add( zjet_0b, -1)
         qcd_int = qcd_r.Integral()
 
-        if nbtag_top_shape_for4b != None: ##this is fine; replace everything with 2bs now
+        if nbtag_top_shape_for4b != None and (r == "44" or r == "33"): ##this is fine; replace everything with 2bs now
             top_r = histos[nbtag_top_shape_for4b]["top"].Clone("top__"+r)
             top_r.Scale( histos[r]["top"].Integral() / top_r.Integral() ) #scale to correct norm for region
         else:
@@ -153,14 +153,19 @@ def QCDSystematics(datafileName="hist_data.root",
         bkg_r = qcd_r.Clone("bkg__"+r)
         bkg_r.Add( top_r )
         #bkg_r.Add( zjet_r )
+        bkg_r.Add( zjet_r )
+        ClearNegBin(bkg_r)
+        
+        # for j in range(bkg_r.GetNbinsX()):
+        #     print bkg_r.GetName(), bkg_r.GetBinContent(j), bkg_r.GetBinCenter(j)
 
 
-        N_bkg_r = bkg_r.Integral()
+        N_bkg_r         = bkg_r.Integral()
 
         Err_N_data_CR_r = R.Double(0)
-        N_data_CR_r =  histos[r]["data"].IntegralAndError(0, histos[r]["data"].GetNbinsX()+1, Err_N_data_CR_r)
+        N_data_CR_r     =  histos[r]["data"].IntegralAndError(0, histos[r]["data"].GetNbinsX()+1, Err_N_data_CR_r)
 
-
+        ##rescale the background estimation to have the same norm?
         bkg_r.Scale(histos[r]["data"].Integral() / bkg_r.Integral())
 
 
@@ -204,8 +209,6 @@ def QCDSystematics(datafileName="hist_data.root",
         xMax   = histos[r]["data"].GetXaxis().GetBinUpEdge(histos[r]["data"].GetXaxis().GetNbins())
         ratio_sm = R.TF1("ratio_crsys_sm"+r, rfunc_ratio, SmoothRange[0], xMax, 0)
         ## ratio_sm.SetLineColor(R.kGray)
-
-
 
         for ivar in range(len(bkg_sm["vars"])):
             dup = bkg_sm["vars"][ivar][0]
@@ -321,17 +324,17 @@ def ttbarShapeSysSR(topfileName="hist_ttbar.root",
 
     
     ## get top SR shape
-    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    folder_sig = HistLocStr(distributionName, signal_region[0], signal_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
     top_sig    = topfile.Get(folder_sig).Clone("top_sig_"+signal_region)
     top_sig.SetDirectory(0)
-    top_sig.Rebin(5)
+    top_sig.Rebin(10)
 
 
     ## get top comparison shape
-    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SR")  #folder( r[0], r[1], btag_WP)
+    folder_comp = HistLocStr(distributionName, compare_region[0], compare_region[1], btag_WP, "SB")  #folder( r[0], r[1], btag_WP)
     top_comp    = topfile.Get(folder_comp).Clone("top_comp_"+compare_region)
     top_comp.SetDirectory(0)
-    top_comp.Rebin(5)
+    top_comp.Rebin(10)
 
     ## remove negative values
     ## assume same binning, else division won't work later
@@ -502,7 +505,12 @@ def LinearFunc(x, par):
     return (par[0] + par[1]*x[0])
 
 
-
+def ClearNegBin(hist):
+    for ibin in range(0, hist.GetNbinsX()+1):
+        if hist.GetBinContent(ibin) < 0:
+            hist.SetBinContent(ibin, 0)
+            hist.SetBinError(ibin, 0)
+    return
 
 '''
 derivation of constant term under variation of slope,

@@ -273,12 +273,12 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
         curr_result = smoothfit(h_clone, fitFunction = theFunc, fitRange = fitRange, makePlots = False, verbose = verbose, outfileName = theFunc+"_"+outfileName)
         if curr_result["prob"] <  minProb:
             funclist_pass[theFunc] = False
-            print "failed prob", h_clone.GetName(), theFunc
+            print "\x1b[1;33;43m WARNING!!! \x1b[0m", "failed prob", h_clone.GetName(), theFunc
             continue
 
         if integralMaxRatio is not None and not PassIntegralCondition(h_clone, curr_result["nom"], integralMaxRatio):
             funclist_pass[theFunc] = False
-            print "failed norm", h_clone.GetName(), theFunc
+            print "\x1b[1;33;43m WARNING!!! \x1b[0m", "failed norm", h_clone.GetName(), theFunc
             continue
         
         funclist_pass[theFunc] = True
@@ -301,8 +301,8 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
         startbin = results_hist[fitFunction].FindBin( fitRange[0] )
         h_start  = results_hist[theFunc].GetBinContent(startbin)
         f_start  = results_hist[fitFunction].GetBinContent(startbin)
-        if abs((f_start - h_start) / h_start) > 0.2:
-            print "failed start point", theFunc
+        if abs((f_start - h_start) / h_start) > 0.1: ##change this to 10% to avoid weird turn on effects
+            print "\x1b[1;33;43m WARNING!!! \x1b[0m", "failed start point", theFunc
             funclist_pass[theFunc] = False
 
     #print results_hist
