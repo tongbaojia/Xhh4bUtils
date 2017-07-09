@@ -11,7 +11,7 @@ import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start = None, makePlots = False, verbose = False, useLikelihood=False, outfileName="fit", ouutfilepath="", initpar=[]):
+def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start = None, makePlots = False, verbose = False, useLikelihood=False, outfileName="fit", ouutfilepath="", initpar=[], maxPlotRange=7000):
     npar = None
     func = None
     fitChoice = None
@@ -167,7 +167,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
         zd = z - evars[i]
         z_variations.append( [zu, zd] )
 
-    drawFunc = R.TF1("drawfit_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+    drawFunc = R.TF1("drawfit_"+outfileName, fitChoice, fitRange[0], maxPlotRange, npar)
     drawFunc.SetParameters( params )
 
     if makePlots:
@@ -189,7 +189,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
 
     fvar = []
     for ivar in range(len(z_variations)):
-        fup = R.TF1("fup_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+        fup = R.TF1("fup_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], maxPlotRange, npar)
         fup.SetParameters( z_variations[ivar][0] )
         fup.SetLineColor(colorlist[ivar])
         if makePlots:
@@ -197,7 +197,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
             # leg.AddEntry(drawFunc, "Fit Variation "+str(ivar), "L")
             leg.AddEntry(fup, "Fit Variation "+str(ivar), "L")          # Qi
 
-        fdw = R.TF1("fdw_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], 5000, npar)
+        fdw = R.TF1("fdw_"+str(ivar)+"_"+outfileName, fitChoice, fitRange[0], maxPlotRange, npar)
         fdw.SetParameters( z_variations[ivar][1] )
         fdw.SetLineColor( colorlist[ivar] )
         if makePlots:
@@ -294,7 +294,7 @@ def smoothFuncCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),  min
             results_hist_ud[theFunc]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][0])
             results_hist_ud[theFunc]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[theFunc]["vars"][ivar][1])
 
-    ##extra screen:
+    ##extra screen on the starting point:
     for theFunc in funclist:
         if funclist_pass[theFunc] == False:
             continue
@@ -542,6 +542,16 @@ def smoothFuncRangeCompare(histo, fitFunction = "Dijet", fitRange = (900, 3000),
             results_hist_ud[fpair]["up"+str(ivar)] = MakeSmoothHisto(h_clone, results[fpair]["vars"][ivar][0])
             results_hist_ud[fpair]["dw"+str(ivar)] = MakeSmoothHisto(h_clone, results[fpair]["vars"][ivar][1])
 
+    ##extra screen on the starting point:
+    for fpair in fitPairs:
+        if fitPairs_pass[fpair] == False:
+            continue
+        startbin = results_hist[fpair].FindBin( fitPairs[fpair][0] )
+        h_start  = results_hist[fpair].GetBinContent(startbin)
+        f_start  = results_hist[strNom].GetBinContent(startbin)
+        if abs((f_start - h_start) / h_start) > 0.1: ##change this to 10% to avoid weird turn on effects
+            print "\x1b[1;33;43m WARNING!!! \x1b[0m", "failed start point", fpair
+            fitPairs_pass[fpair] = False
 
     if verbose:
         for maxRange in fitMaxVals:
@@ -770,14 +780,25 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=True):   # qi
     low=R.Double(0.0)
     high=R.Double(0.0)
     fitCurve.GetRange(low, high)
+    flat_high = 5000 ##get the turn up value; fix it to the previous one ##Tony
 
     oldIntegral = 0
     newIntegral = 0
 
     hist_smooth = hist.Clone(hist.GetName()+"__smooth")
+    ##find the turning point
+    for ibin in range(0, hist_smooth.GetNbinsX()+1):
+        if hist_smooth.GetBinLowEdge(ibin) > low:
+            if (fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin), hist_smooth.GetBinLowEdge(ibin+1))/hist_smooth.GetBinWidth(ibin)
+                < fitCurve.Integral(hist_smooth.GetBinLowEdge(ibin + 1), hist_smooth.GetBinLowEdge(ibin+2))/hist_smooth.GetBinWidth(ibin + 1)):
+                flat_high = hist_smooth.GetBinLowEdge(ibin)
+                #print flat_high
+                break
+    flat_high = min(flat_high, 5000) ##don't go above 4000 anyway
+
     for ibin in range(0, hist_smooth.GetNbinsX()+1):
 
-        if hist_smooth.GetBinLowEdge(ibin) >= high: ##don't do anything above 4 TeV for now!!
+        if hist_smooth.GetBinLowEdge(ibin) >= flat_high: ##don't do anything above 4 TeV for now!!
             hist_smooth.SetBinContent(ibin, 0)
             hist_smooth.SetBinError(ibin, 0)
             continue
@@ -803,6 +824,10 @@ def MakeSmoothHisto(hist, fitCurve, lowFillVal = 500, keepNorm=True):   # qi
     for ibin in range(hist_smooth.FindBin(high), hist_smooth.GetNbinsX() + 1):
         hist_smooth.SetBinContent(ibin, 0)
         hist_smooth.SetBinError(ibin, 0)
+    ##flat tail, when there is an increase!
+    for ibin in range(hist_smooth.FindBin(flat_high), hist_smooth.GetNbinsX() + 1):
+        hist_smooth.SetBinContent(ibin, hist_smooth.GetBinContent(hist_smooth.FindBin(flat_high)))
+        hist_smooth.SetBinError(ibin, hist_smooth.GetBinError(hist_smooth.FindBin(flat_high)))
 
     #print fitCurve.GetName(), oldIntegral, newIntegral, low, high, hist.Integral(), hist_smooth.Integral(), fitCurve.Integral(1200, 4000)
     return hist_smooth

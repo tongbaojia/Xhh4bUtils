@@ -416,6 +416,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             smoothfit.smoothFuncRangeCompare(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, fitMaxVals = stepped_max_vals, fitMinVals=stepped_min_vals,
                                             makePlots = True, plotExtra = False, verbose = False, outfileName="smoothFuncRangeCompare_"+r+".root")   # Qi
 
+            
             ## ttbar smoothing variations##############################################################################
             if not addSmoothErrorBin:
                 for ivar in range(len(top_sm["vars"])):
@@ -442,6 +443,55 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                     top_r_tdw.SetDirectory(0)
                     output_Dict[r]["ttbar"]["smoothQ"+str(ivar)+"up"] = top_r_tup
                     output_Dict[r]["ttbar"]["smoothQ"+str(ivar)+"down"] = top_r_tdw
+
+            ## ttbar smootthing function variations##############################################################################
+            if False:
+                topsmoothFuncCompSyst = smoothfit.smoothFuncCompare(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange,            # qi
+                                                                 makePlots = True, verbose = False, outfileName="topsmoothFuncCompare_"+r+".root", plotExtra=False)  # Qi
+
+
+                top_r_func_up = topsmoothFuncCompSyst["up"]
+                top_r_func_dw = topsmoothFuncCompSyst["dw"]
+
+                if rebinFinal is not None:
+                    top_r_func_up = top_r_func_up.Rebin(len(rebinFinal)-1, top_r_func_up.GetName()+"_rebinFinal", rebinFinal)
+                    top_r_func_dw = top_r_func_dw.Rebin(len(rebinFinal)-1, top_r_func_dw.GetName()+"_rebinFinal", rebinFinal)
+
+                if makeOutputFiles:
+                    outfileStat.WriteTObject(top_r_func_up, "ttbar_hh_smoothFuncup","Overwrite")
+                    outfileStat.WriteTObject(top_r_func_dw, "ttbar_hh_smoothFuncdown","Overwrite")
+                    
+
+                # treat negative bin
+                ClearNegBin(top_r_func_up)
+                ClearNegBin(top_r_func_dw)
+
+                top_r_func_up.SetDirectory(0)
+                top_r_func_dw.SetDirectory(0)
+                output_Dict[r]["ttbar"]["smoothFuncup"] = top_r_func_up
+                output_Dict[r]["ttbar"]["smoothFuncdown"] = top_r_func_dw
+                
+                stepped_min_vals = []
+                stepped_max_vals = []
+                stepped_fitting = True
+                if stepped_fitting == True:
+                    starting_bin = top_r_tup.FindBin(topSmoothRange[0])
+                    stepped_min_vals.append(str(topSmoothRange[0]))
+                    for step in range(0, 3):
+                        current_starting_bin = starting_bin + step*1
+                        current_starting_mass = top_r_tup.GetBinCenter(current_starting_bin)
+                        stepped_min_vals.append(str(int(current_starting_mass)))
+                    stepped_min_vals = ["1200", "1300", "1400"]
+                    stepped_max_vals = ["2800", "3000", "3200"]
+                else:
+                    stepped_max_vals = ["1850","2000","2250","2500"]
+                    stepped_min_vals = [str(topSmoothRange[0]),"1300","1400"]    
+                print "MAX AND MIN ARE:"
+                print stepped_max_vals
+                print stepped_min_vals
+
+                smoothfit.smoothFuncRangeCompare(top_r, fitFunction = smoothing_func, fitRange = topSmoothRange, fitMaxVals = stepped_max_vals, fitMinVals=stepped_min_vals,
+                                                makePlots = True, plotExtra = False, verbose = False, outfileName="topsmoothFuncRangeCompare_"+r+".root")   # Qi
 
 
         ########################################################################################################
@@ -564,6 +614,18 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             if rebinFinal is not None:
                 qvar_shape_up_final = qvar_shape_up_final.Rebin(len(rebinFinal)-1, qvar_shape_up_final.GetName()+"_rebinFinal", rebinFinal)
                 qvar_shape_dw_final = qvar_shape_dw_final.Rebin(len(rebinFinal)-1, qvar_shape_dw_final.GetName()+"_rebinFinal", rebinFinal)
+
+            # treat increasing bin, flat it out
+            for i in range(1, qvar_shape_up_final.GetNbinsX()):
+                if qvar_shape_up_final.GetBinLowEdge(i) > qcdSmoothRange[0]:
+                   if qvar_shape_up_final.GetBinContent(i) < qvar_shape_up_final.GetBinContent(i + 1):
+                        qvar_shape_up_final.SetBinContent(i + 1, qvar_shape_up_final.GetBinContent(i))
+                        qvar_shape_up_final.SetBinError(i + 1, qvar_shape_up_final.GetBinError(i))
+            for i in range(1, qvar_shape_dw_final.GetNbinsX()):
+                if qvar_shape_dw_final.GetBinLowEdge(i) > qcdSmoothRange[0]:
+                   if qvar_shape_dw_final.GetBinContent(i) < qvar_shape_dw_final.GetBinContent(i + 1):
+                        qvar_shape_dw_final.SetBinContent(i + 1, qvar_shape_dw_final.GetBinContent(i))
+                        qvar_shape_dw_final.SetBinError(i + 1, qvar_shape_dw_final.GetBinError(i))
 
             ###split the QCD shape systematic into two parts
             qvar_shape_up_low  = qvar_shape_up_final.Clone(qvar_shape_up_final.GetName() + "_low")
