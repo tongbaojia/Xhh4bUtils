@@ -194,8 +194,9 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         zjet_r   = CheckAndGet(zjetfile, folder_r, top_r).Clone("zjet_"+r)
         zjet_r.SetDirectory(0)
 
-        #clear the negative weight bins for ttbar
-        ClearNegBin(top_r)
+        #DO NOT clear the negative weight bins for ttbar
+        #ClearNegBin(top_r)
+        #print folder_r, top_r.Integral()
 
         if do_variable_rebin:
             data_r = smoothfit.VariableRebin(data_r,5,2000)
@@ -243,7 +244,9 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         #clear the negative weight bins for qcd as well
         ClearNegBin(qcd_r)
 
+        #print histos[r]["top"].GetName(), r
         top_r = histos[r]["top"].Clone("top__"+r)
+        #print top_r.Integral(), "here! 0"
         if (nbtag_top_shape_for4b == "22") and (r == "44") and (MassRegionName == "SR"):   # the 3b top shape is only used during the SR prediction for 44 region
             temp_scaler = top_r.Integral() / histos["22"]["top"].Integral()
             top_r = histos["22"]["top"].Clone("top__"+r)
@@ -576,9 +579,13 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             original_norm = qcd_final.Integral(0, 4000) ##restricted range
             qvar_shape_up = qcd_r.Clone("qvar_QCDshape_up")
             qvar_shape_dw = qcd_r.Clone("qvar_QCDshape_dw")
+            tvar_shape_up_final = top_final.Clone("tvar_QCDshape_up")
+            tvar_shape_dw_final = top_final.Clone("tvar_QCDshape_dw")
 
             ClearNegBin(qvar_shape_up)
             ClearNegBin(qvar_shape_dw)
+            ClearNegBin(tvar_shape_up_final)
+            ClearNegBin(tvar_shape_dw_final)
         
             ## Now do smoothing
             if do_smoothing:
@@ -596,6 +603,9 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
 
                 qvar_shape_up_final.Multiply( QCDSyst_Dict["Shape_"+r] )
                 qvar_shape_dw_final.Divide( QCDSyst_Dict["Shape_"+r] )
+                ##sacale the top as well
+                tvar_shape_up_final.Multiply( QCDSyst_Dict["Shape_"+r] )
+                tvar_shape_dw_final.Divide( QCDSyst_Dict["Shape_"+r] )
 
                 # for i in range(1, qvar_shape_up_final.GetNbinsX()):
                 #     print r, i, qvar_shape_up_final.GetBinContent(i), qvar_shape_up_final.GetBinCenter(i), qcd_r.GetBinContent(i), QCDSyst_Dict["Shape_"+r].Integral(qcd_r.GetBinLowEdge(i), qcd_r.GetBinLowEdge(i+1))
@@ -626,6 +636,16 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                    if qvar_shape_dw_final.GetBinContent(i) < qvar_shape_dw_final.GetBinContent(i + 1):
                         qvar_shape_dw_final.SetBinContent(i + 1, qvar_shape_dw_final.GetBinContent(i))
                         qvar_shape_dw_final.SetBinError(i + 1, qvar_shape_dw_final.GetBinError(i))
+            for i in range(1, tvar_shape_dw_final.GetNbinsX()):
+                if tvar_shape_dw_final.GetBinLowEdge(i) > qcdSmoothRange[0]:
+                   if tvar_shape_dw_final.GetBinContent(i) < tvar_shape_dw_final.GetBinContent(i + 1):
+                        tvar_shape_dw_final.SetBinContent(i + 1, tvar_shape_dw_final.GetBinContent(i))
+                        tvar_shape_dw_final.SetBinError(i + 1, tvar_shape_dw_final.GetBinError(i))
+            for i in range(1, tvar_shape_dw_final.GetNbinsX()):
+                if tvar_shape_dw_final.GetBinLowEdge(i) > qcdSmoothRange[0]:
+                   if tvar_shape_dw_final.GetBinContent(i) < tvar_shape_dw_final.GetBinContent(i + 1):
+                        tvar_shape_dw_final.SetBinContent(i + 1, tvar_shape_dw_final.GetBinContent(i))
+                        tvar_shape_dw_final.SetBinError(i + 1, tvar_shape_dw_final.GetBinError(i))
 
             ###split the QCD shape systematic into two parts
             qvar_shape_up_low  = qvar_shape_up_final.Clone(qvar_shape_up_final.GetName() + "_low")
@@ -636,6 +656,14 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             qvar_shape_dw_low.SetDirectory(0)
             qvar_shape_dw_high = qvar_shape_dw_final.Clone(qvar_shape_dw_final.GetName() + "_high")
             qvar_shape_dw_high.SetDirectory(0)
+            tvar_shape_up_low  = tvar_shape_up_final.Clone(tvar_shape_up_final.GetName() + "_low")
+            tvar_shape_up_low.SetDirectory(0)
+            tvar_shape_up_high = tvar_shape_up_final.Clone(tvar_shape_up_final.GetName() + "_high")
+            tvar_shape_up_high.SetDirectory(0)
+            tvar_shape_dw_low  = tvar_shape_dw_final.Clone(tvar_shape_dw_final.GetName() + "_low")
+            tvar_shape_dw_low.SetDirectory(0)
+            tvar_shape_dw_high = tvar_shape_dw_final.Clone(tvar_shape_dw_final.GetName() + "_high")
+            tvar_shape_dw_high.SetDirectory(0)
             
             #print "FUCK THIS", qcd_r.GetNbinsX(), qvar_shape_up_final.GetNbinsX(), qvar_shape_up_high.GetNbinsX()
             for k in range(1, qcd_final.GetNbinsX()):
@@ -649,6 +677,17 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                     qvar_shape_up_high.SetBinError(k, 0)
                     qvar_shape_dw_high.SetBinContent(k, qcd_final.GetBinContent(k))
                     qvar_shape_dw_high.SetBinError(k, 0)
+            for k in range(1, top_final.GetNbinsX()):
+                if top_final.GetBinLowEdge(k) >= 2000:
+                    tvar_shape_up_low.SetBinContent(k, top_final.GetBinContent(k))
+                    tvar_shape_up_low.SetBinError(k, 0)
+                    tvar_shape_dw_low.SetBinContent(k, top_final.GetBinContent(k))
+                    tvar_shape_dw_low.SetBinError(k, 0)
+                else:
+                    tvar_shape_up_high.SetBinContent(k, top_final.GetBinContent(k))
+                    tvar_shape_up_high.SetBinError(k, 0)
+                    tvar_shape_dw_high.SetBinContent(k, top_final.GetBinContent(k))
+                    tvar_shape_dw_high.SetBinError(k, 0)
 
             if makeOutputFiles:
                 outfileStat.WriteTObject(qvar_shape_up_final, "qcd_hh_QCDShapeCRup")
@@ -657,6 +696,12 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                 outfileStat.WriteTObject(qvar_shape_dw_low,   "qcd_hh_QCDShapeCRLowdown")
                 outfileStat.WriteTObject(qvar_shape_up_high,  "qcd_hh_QCDShapeCRHighup")
                 outfileStat.WriteTObject(qvar_shape_dw_high,  "qcd_hh_QCDShapeCRHighdown")
+                outfileStat.WriteTObject(tvar_shape_up_final, "top_hh_QCDShapeCRup")
+                outfileStat.WriteTObject(tvar_shape_dw_final, "top_hh_QCDShapeCRdown")
+                outfileStat.WriteTObject(tvar_shape_up_low,   "top_hh_QCDShapeCRLowup")
+                outfileStat.WriteTObject(tvar_shape_dw_low,   "top_hh_QCDShapeCRLowdown")
+                outfileStat.WriteTObject(tvar_shape_up_high,  "top_hh_QCDShapeCRHighup")
+                outfileStat.WriteTObject(tvar_shape_dw_high,  "top_hh_QCDShapeCRHighdown")
 
             qvar_shape_up_final.SetDirectory(0)
             qvar_shape_dw_final.SetDirectory(0)
@@ -672,6 +717,19 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             output_Dict[r]["qcd"]["QCDShapeCRHighup"]  = qvar_shape_up_high
             output_Dict[r]["qcd"]["QCDShapeCRHighdown"]= qvar_shape_dw_high
 
+            tvar_shape_up_final.SetDirectory(0)
+            tvar_shape_dw_final.SetDirectory(0)
+            tvar_shape_up_low.SetDirectory(0)
+            tvar_shape_dw_low.SetDirectory(0)
+            tvar_shape_up_high.SetDirectory(0)
+            tvar_shape_dw_high.SetDirectory(0)
+            
+            output_Dict[r]["ttbar"]["QCDShapeCRup"]      = tvar_shape_up_final
+            output_Dict[r]["ttbar"]["QCDShapeCRdown"]    = tvar_shape_dw_final
+            output_Dict[r]["ttbar"]["QCDShapeCRLowup"]   = tvar_shape_up_low
+            output_Dict[r]["ttbar"]["QCDShapeCRLowdown"] = tvar_shape_dw_low
+            output_Dict[r]["ttbar"]["QCDShapeCRHighup"]  = tvar_shape_up_high
+            output_Dict[r]["ttbar"]["QCDShapeCRHighdown"]= tvar_shape_dw_high
         ###########################################################################################
         ### Norm comparison in CR      ############################################################
         ###########################################################################################
