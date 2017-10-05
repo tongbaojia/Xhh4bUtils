@@ -11,7 +11,7 @@ import cPickle as pickle
 
 import time
 
-def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start = None, makePlots = False, verbose = False, useLikelihood=False, outfileName="fit", ouutfilepath="", initpar=[], maxPlotRange=7000):
+def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start = None, makePlots = False, verbose = False, useLikelihood=False, outfileName="fit", ouutfilepath="", initpar=[], maxPlotRange=4000):
     npar = None
     func = None
     fitChoice = None

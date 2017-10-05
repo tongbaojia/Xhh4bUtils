@@ -53,7 +53,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
                   do_variable_rebin = False
                   ):
     ##### Parse Inputs ############################################
-    fitzjets    = False
+    fitzjets    = True
     dist_name   = distributionName
     print "the chosen hist is: ", dist_name
     
@@ -237,12 +237,14 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         zjet_0b = histos[r_0b]["zjet"].Clone("zjet_0b__"+r)
 
         qcd_r = histos[r_0b]["data"].Clone("qcd__"+r)
-        qcd_r.Add( top_0b, -1)
+        print "zjet total:", zjet_0b.Integral(), "top total:", top_0b.Integral(), "qcd total:", qcd_r.Integral()
+        qcd_r.Add( top_0b, -1 * best_attbar)
         qcd_r.Add( zjet_0b, -1)
-        qcd_int = qcd_r.Integral()
 
         #clear the negative weight bins for qcd as well
         ClearNegBin(qcd_r)
+        qcd_int = qcd_r.Integral()
+        print "qcd total:", qcd_int, "here! 2", bkgFitResults["muqcd"][ir], best_attbar
 
         #print histos[r]["top"].GetName(), r
         top_r = histos[r]["top"].Clone("top__"+r)
@@ -265,7 +267,7 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         
         qcd_r.Scale( mu_qcd )
         top_r.Scale( top_scale )
-        #print "top total:", top_r.Integral(), " ; qcd total:", qcd_r.Integral(), "here! 2"
+        print "top total:", top_r.Integral(), " ; qcd total:", qcd_r.Integral(), "here! 2"
 
         bkg_r = qcd_r.Clone("bkg__" + r)
         bkg_r.Add( top_r, 1)
@@ -288,8 +290,13 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
         ## Now do smoothing ###########################################################################################
         print "start smoothing: ", ir
         if do_smoothing:
-            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = False, verbose = False, outfileName="qcd_smoothfit_"+r+".root")
-            top_sm = smoothfit.smoothfit(top_r, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = False, outfileName="top_smoothfit_"+r+".root")
+            ##for qcd, trick and add zjet into the total normalization; consistent as smoothing part
+            ##renormalize to Zjet normalization
+            qcd_r.Scale((zjet_r.Integral() + qcd_r.Integral())/qcd_r.Integral())
+            int_pre = qcd_r.Integral()
+            qcd_sm = smoothfit.smoothfit(qcd_r, fitFunction = smoothing_func, fitRange = qcdSmoothRange, makePlots = False, verbose = False, outfileName="qcd_smoothfit_"+r+".root", maxPlotRange=4000)
+            top_sm = smoothfit.smoothfit(top_r, fitFunction = top_smoothing_func, fitRange = topSmoothRange, makePlots = False, verbose = False, outfileName="top_smoothfit_"+r+".root", maxPlotRange=4000)
+            
             #print "top total:", top_r.Integral(), " ; qcd total:", qcd_r.Integral(), "here! 2.5"
             if addSmoothErrorBin:
                 qcd_final = smoothfit.MakeSmoothHistoWithError(qcd_r, qcd_sm)
@@ -303,6 +310,11 @@ def HistoAnalysis(datafileName="/afs/cern.ch/user/b/btong/work/bbbb/MoriondAnaly
             qcd_final = qcd_r.Clone("qcd_hh_"+r+"__clone")
             top_final = top_r.Clone("ttbar_hh_"+r+"__clone")
         
+        int_aft = qcd_final.Integral()
+        if int_aft > 0:
+            qcd_final.Scale(int_pre/int_aft) ##fix normalization hard way
+
+        print "after smoothing: ", qcd_final.Integral()
         #print "top total:", top_final.Integral(), " ; qcd total:", qcd_final.Integral(), "here! 3"
         zjet_final = zjet_r.Clone("zjet_hh_"+r+"__clone")
         
