@@ -239,13 +239,14 @@ def BackgroundFit(datafileName        ="hist_data.root",
     # h_store_4b_ttbar.SetDirectory(0)
     # results["inputhist_4b_ttbar"] = h_store_4b_ttbar
 
-    #print pnom
-    #print pvars
+    print pnom
+    print pvars
+    print evars
 
-    # print "Fit Results:"
-    # print "mu_qcd = ", results["muqcd"], "+/-", results["muqcd_e"]
-    # print "top_scale = ", results["muttbar"], "+/-", results["muttbar_e"]
-    # print "correlation=", results["corr_m"]
+    print "Fit Results:"
+    print "mu_qcd = ", results["muqcd"], "+/-", results["muqcd_e"]
+    print "top_scale = ", results["muttbar"], "+/-", results["muttbar_e"]
+    print "correlation=", results["corr_m"]
 
     texoutpath = Output + "Tables/"
     if not os.path.exists(texoutpath):
@@ -570,21 +571,22 @@ def WriteFitResult(inputdic, outFile, nfit=3):
     tableList.append("\\hline\\hline")
     tableList.append("& & & \\\\")
 
+    l_str = 5 ##used to be 3, smart ATLAS
     for i, cut in enumerate(regions):
     #get the mass plot
         outstr = ""
         outstr += cut.replace("_", " ")
         outstr += " & "
-        outstr += str(round_sig(inputdic["muqcd"][i], 3))
+        outstr += str(round_sig(inputdic["muqcd"][i], l_str))
         outstr += " $\\pm$ "
-        outstr += str(round_sig(inputdic["muqcd_e"][i], 3))
+        outstr += str(round_sig(inputdic["muqcd_e"][i], l_str))
         outstr += " & "
-        outstr += str(round_sig(inputdic["muttbar"][i], 3)) if not useOneTopNuis else str(round_sig(inputdic["muttbar"][0], 3))
+        outstr += str(round_sig(inputdic["muttbar"][i], l_str)) if not useOneTopNuis else str(round_sig(inputdic["muttbar"][0], l_str))
         outstr += " $\\pm$ "
-        outstr += str(round_sig(inputdic["muttbar_e"][i], 3)) if not useOneTopNuis else str(round_sig(inputdic["muttbar_e"][0], 3))
+        outstr += str(round_sig(inputdic["muttbar_e"][i], l_str)) if not useOneTopNuis else str(round_sig(inputdic["muttbar_e"][0], l_str))
         outstr += " & "
-        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], 3)) if not useOneTopNuis else str(round_sig(inputdic["corr_m"][i][-1], 3))
-        outstr+="\\\\"
+        outstr += str(round_sig(inputdic["corr_m"][i][i + nfit], l_str)) if not useOneTopNuis else str(round_sig(inputdic["corr_m"][i][-1], l_str))
+        outstr +="\\\\"
         tableList.append(outstr)
 
     tableList.append("& & & \\\\")

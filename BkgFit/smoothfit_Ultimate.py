@@ -17,7 +17,7 @@ def smoothfit(histo, fitFunction = "Exp", fitRange = (900, 3000), outrange_start
     fitChoice = None
     colorlist = [R.kBlue, R.kGreen, R.kOrange, R.kMagenta, R.kCyan, R.kPink]
 
-    fitName = "fit_"+outfileName+"_%s" % (time.time())  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
+    fitName = "fit_"+outfileName+"_%s" % str(time.time()).replace(".", "")  # need to make this name unique, otherwise it will give wrong answer when two consecutive fitting is performed
     
     if fitFunction == "Exp":
         npar = 2
